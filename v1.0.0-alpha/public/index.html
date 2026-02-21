@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ELITE DANGEROUS NEXT</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="/socket.io/socket.io.js"></script>
+        <style>
+            /* Base styles for initial loading screen */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                border-radius: 0 !important;
+            }
+            html, body {
+                height: 100%;
+                background: #000000;
+                font-family: 'JetBrains Mono', 'Consolas', monospace;
+            }
+            #root {
+                height: 100vh;
+                display: none;
+            }
+            .loading-screen {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                gap: 24px;
+                background: #000000;
+            }
+            .loading-spinner {
+                width: 60px;
+                height: 60px;
+                border: 2px solid #ff8c00;
+                border-top-color: transparent;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            .loading-text {
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 18px;
+                color: #ff8c00;
+                letter-spacing: 4px;
+                text-transform: uppercase;
+            }
+        </style>
+        <link rel="stylesheet" href="/assets/client.css">
+    </head>
+    <body>
+        <div id="root">
+            <div class="loading-screen">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">INITIALIZING...</div>
+            </div>
+        </div>
+
+        <!-- Auth Modal -->
+        <div id="authModal" class="auth-modal-overlay" aria-hidden="true">
+            <div class="auth-modal">
+                <div class="auth-modal-header">
+                    <div class="auth-modal-logo">ELITE DANGEROUS</div>
+                    <div class="auth-modal-subtitle">Companion Link</div>
+                </div>
+
+                <!-- Auth Error -->
+                <div
+                    id="authError"
+                    class="auth-error"
+                    style="display: none"
+                ></div>
+
+                <!-- Auth Loading -->
+                <div
+                    id="authLoading"
+                    class="auth-loading"
+                    style="display: none"
+                >
+                    <div class="auth-spinner"></div>
+                    <div class="auth-loading-text">
+                        Connecting to Frontier...
+                    </div>
+                </div>
+
+                <!-- Auth Success -->
+                <div
+                    id="authSuccess"
+                    class="auth-success"
+                    style="display: none"
+                >
+                    <div class="auth-success-icon">✓</div>
+                    <div class="auth-success-text">
+                        Authentication Successful
+                    </div>
+                    <div id="authCmdrName" class="auth-cmdr-name"></div>
+                </div>
+
+                <!-- Auth Login Section -->
+                <div id="authLoginSection">
+                    <div class="auth-section">
+                        <div class="auth-section-title">
+                            Connect Your Account
+                        </div>
+                        <button
+                            id="frontierLoginBtn"
+                            class="frontier-login-btn"
+                            onclick="window.frontierLogin()"
+                        >
+                            <svg
+                                class="frontier-icon"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l6.9 3.45L12 11.09 5.1 7.63 12 4.18zM4 8.82l7 3.5v7.36l-7-3.5V8.82zm9 10.86v-7.36l7-3.5v7.36l-7 3.5z"
+                                />
+                            </svg>
+                            Login with Frontier
+                        </button>
+                    </div>
+
+                    <div class="auth-divider">
+                        <div class="auth-divider-line"></div>
+                        <span>or</span>
+                        <div class="auth-divider-line"></div>
+                    </div>
+
+                    <div class="auth-anonymous">
+                        <button id="anonymousBtn" class="auth-anonymous-btn" onclick="window.continueAnonymous()">
+                            Continue Without Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/assets/client.js"></script>
+        <script>
+            // Show auth modal on page load
+            document.addEventListener("DOMContentLoaded", function() {
+                const authModal = document.getElementById("authModal");
+                if (authModal) {
+                    authModal.setAttribute("aria-hidden", "false");
+                    authModal.style.display = "flex";
+                }
+            });
+
+            // Auth button handlers
+            window.frontierLogin = async function() {
+                const loginBtn = document.getElementById("frontierLoginBtn");
+                const authError = document.getElementById("authError");
+                const authLoading = document.getElementById("authLoading");
+                const authLoginSection = document.getElementById("authLoginSection");
+
+                if (loginBtn) loginBtn.disabled = true;
+                if (authError) authError.style.display = "none";
+                if (authLoginSection) authLoginSection.style.display = "none";
+                if (authLoading) authLoading.style.display = "flex";
+
+                try {
+                    const response = await fetch("/auth/login");
+                    if (!response.ok) throw new Error("Auth failed");
+                    const data = await response.json();
+                    
+                    if (data.success && data.redirectUrl) {
+                        window.location.href = data.redirectUrl;
+                    } else {
+                        throw new Error(data.error || "Login failed");
+                    }
+                } catch (error) {
+                    console.error("Login error:", error);
+                    if (authError) {
+                        authError.textContent = "Failed to connect to Frontier. Please try again.";
+                        authError.style.display = "block";
+                    }
+                    if (authLoading) authLoading.style.display = "none";
+                    if (authLoginSection) authLoginSection.style.display = "block";
+                    if (loginBtn) loginBtn.disabled = false;
+                }
+            };
+
+            window.continueAnonymous = function() {
+                const authModal = document.getElementById("authModal");
+                if (authModal) {
+                    authModal.setAttribute("aria-hidden", "true");
+                    authModal.style.display = "none";
+                }
+                // Show main content
+                const root = document.getElementById("root");
+                if (root) {
+                    root.style.display = "flex";
+                    root.style.flexDirection = "column";
+                    root.style.height = "100vh";
+                }
+                // Dispatch custom event for React to handle
+                window.dispatchEvent(new CustomEvent("auth:anonymous"));
+            };
+        </script>
+    </body>
+</html>
