@@ -2,9 +2,6 @@
 
 Веб-приложение для мониторинга и анализа журнальных файлов космической игры **Elite Dangerous** в реальном времени.
 
-![GitHub release](https://img.shields.io/github/v/release/rewtwrtwr/ELITE-DANGEROUS-NEXT)
-![License](https://img.shields.io/github/license/rewtwrtwr/ELITE-DANGEROUS-NEXT)
-
 ## ✨ Возможности
 
 - ⚡ **Автообнаружение журналов** — автоматически находит и читает журналы игры
