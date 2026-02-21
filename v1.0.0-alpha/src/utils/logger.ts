@@ -72,7 +72,7 @@ function ensureLogDir(): void {
 function rotateLogsIfNeeded(): void {
   const currentPath = getCurrentLogFilePath();
 
-  if (currentStream) {
+  if (currentStream && fs.existsSync(currentPath)) {
     currentFileSize = fs.statSync(currentPath).size;
   }
 
