@@ -425,11 +425,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
-- **🐛 Issues:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/issues
-- **💬 Discussions:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/discussions
-- **📚 Documentation:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs
-- **📡 API Docs:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/API.md
-- **🔗 Releases:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases
+- **🐛 Issues:** [GitHub Issues](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/issues)
+- **💬 Discussions:** [GitHub Discussions](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/discussions)
+- **📚 Documentation:** [Docs](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs)
+- **📡 API Docs:** [API Reference](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/API.md)
+- **🔗 Releases:** [Releases](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases)
 
 ---
 
