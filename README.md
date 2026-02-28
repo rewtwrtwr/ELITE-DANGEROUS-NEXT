@@ -73,8 +73,8 @@
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/yourusername/elite-dangerous-next.git
-cd elite-dangerous-next
+git clone https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT.git
+cd ELITE-DANGEROUS-NEXT
 
 # Установить зависимости
 npm install
@@ -92,8 +92,8 @@ npm run dev
 ### 1. Клонирование
 
 ```bash
-git clone https://github.com/yourusername/elite-dangerous-next.git
-cd elite-dangerous-next
+git clone https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT.git
+cd ELITE-DANGEROUS-NEXT
 ```
 
 ### 2. Установка зависимостей
