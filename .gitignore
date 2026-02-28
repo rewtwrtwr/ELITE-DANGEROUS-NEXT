@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Database files (personal data)
+data/*.db
+!data/elite.db
+!data/test-*.db
+
+# Logs
+logs/
+*.log
+
+# Test output files (temporary)
+test-*.txt
+
+# Coverage reports
+coverage/
+
+# Environment variables
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Junk files
+nul
