@@ -3,11 +3,13 @@ node_modules/
 
 # Build output
 dist/
+public/assets/
 
-# Database files (personal data)
+# Database files (personal data) - DO NOT COMMIT
 data/*.db
-!data/elite.db
-!data/test-*.db
+data/*.db-wal
+data/*.db-shm
+data/test-*.db
 
 # Logs
 logs/
@@ -21,6 +23,10 @@ coverage/
 
 # Environment variables
 .env
+.env.local
+
+# Local scripts
+start.bat
 
 # System files
 .DS_Store
