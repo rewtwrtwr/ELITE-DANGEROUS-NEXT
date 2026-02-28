@@ -1,14 +1,18 @@
 # 🚀 Elite Dangerous NEXT
 
-[![Version](https://img.shields.io/badge/version-1.0.0--beta-blue.svg)]()
-[![Tests](https://img.shields.io/badge/tests-66/66%20passing-brightgreen.svg)]()
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
-[![Security](https://img.shields.io/badge/security-0%20vulnerabilities-brightgreen.svg)]()
-[![SQLite](https://img.shields.io/badge/database-better--sqlite3-orange.svg)]()
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)]()
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-1.0.0--beta-blue.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![Tests](https://img.shields.io/badge/tests-66/66%20passing-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/actions)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![Security](https://img.shields.io/badge/security-0%20vulnerabilities-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![SQLite](https://img.shields.io/badge/database-better--sqlite3-orange.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![GitHub](https://img.shields.io/github/last-commit/rewtwrtwr/ELITE-DANGEROUS-NEXT/v1.0.0-beta)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![Release](https://img.shields.io/github/v/release/rewtwrtwr/ELITE-DANGEROUS-NEXT?label=release)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.0-beta)
 
 > 🎮 **Продвинутый анализатор журналов Elite Dangerous с real-time отслеживанием, статистикой и веб-интерфейсом**
+
+**🔗 GitHub:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta
 
 ---
 
@@ -392,11 +396,11 @@ Time:        < 3 seconds
 
 ### Как внести вклад
 
-1. Fork репозиторий
-2. Создайте feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit изменения (`git commit -m 'Add amazing feature'`)
-4. Push в branch (`git push origin feature/amazing-feature`)
-5. Откройте Pull Request
+1. **Fork репозиторий:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/fork
+2. **Создайте feature branch:** `git checkout -b feature/amazing-feature`
+3. **Commit изменения:** `git commit -m 'Add amazing feature'`
+4. **Push в branch:** `git push origin feature/amazing-feature`
+5. **Откройте Pull Request:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/pulls
 
 ### Требования к коду
 
@@ -421,9 +425,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/elite-dangerous-next/issues)
-- **Documentation:** [docs/](docs/)
-- **API Docs:** [docs/API.md](docs/API.md)
+- **🐛 Issues:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/issues
+- **💬 Discussions:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/discussions
+- **📚 Documentation:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs
+- **📡 API Docs:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/API.md
+- **🔗 Releases:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases
 
 ---
 
