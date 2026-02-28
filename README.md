@@ -16,6 +16,22 @@
 
 ---
 
+## 🌿 Branch Strategy
+
+| Branch | Purpose | Status |
+|--------|---------|--------|
+| **main** | Repository "face" — only README.md | ✅ Default branch |
+| **v1.0.0-beta** | Latest beta release — full source code | ✅ Stable |
+| **dev_prerelease** | Pre-release development — testing new features | 🟡 Active development |
+| **v1.0.0-alpha** | Deprecated alpha version | ⚠️ Deprecated |
+
+**Important:**
+- **main** branch is in a separate repository folder (`ELITE-DANGEROUS-NEXT-MAIN`)
+- All development happens in `v1.0.0-beta` or `dev_prerelease` branches
+- Never commit directly to **main** branch
+
+---
+
 ## 📋 Содержание
 
 - [Возможности](#-возможности)
