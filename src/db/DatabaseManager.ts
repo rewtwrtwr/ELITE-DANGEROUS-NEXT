@@ -7,17 +7,25 @@
  * - WAL mode for performance
  * - Transactions support
  * - Sync operations (no async/await needed)
+ *
+ * @example
+ * ```typescript
+ * import { dbManager } from './DatabaseManager.js';
+ * dbManager.init();
+ * const db = dbManager.getDatabase();
+ * dbManager.close();
+ * ```
  */
 
-import Database from 'better-sqlite3';
-import type { Database as DatabaseType } from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
-import { logger } from '../utils/logger.js';
+import Database from "better-sqlite3";
+import type { Database as DatabaseType } from "better-sqlite3";
+import fs from "fs";
+import path from "path";
+import { logger } from "../utils/logger.js";
 
 // Configuration
-const DB_FILENAME = 'elite.db';
-const DB_DIR = path.join(process.cwd(), 'data');
+const DB_FILENAME = "elite.db";
+const DB_DIR = path.join(process.cwd(), "data");
 // Use TEST_DB_PATH environment variable if set (for testing), otherwise use default path
 const DB_PATH = process.env.TEST_DB_PATH || path.join(DB_DIR, DB_FILENAME);
 
@@ -28,28 +36,40 @@ export class DatabaseManager {
   private currentDbPath: string | null = null;
 
   /**
-   * Initialize database connection
-   * Sync operation - no async/await needed
+   * Initialize database connection with WAL mode and schema creation
+   *
+   * Sync operation - no async/await needed.
+   * Creates data directory if not exists.
+   * Enables WAL mode, 64MB cache, and foreign keys.
+   * Runs schema migrations for backward compatibility.
+   *
+   * @throws {Error} If database cannot be opened or created
+   *
+   * @example
+   * ```typescript
+   * dbManager.init();
+   * console.log(dbManager.isInitialized()); // true
+   * ```
    */
   init(): void {
     if (this.initialized) {
       // For in-memory databases, always recreate to ensure clean state
       const dbPath = process.env.TEST_DB_PATH;
-      if (dbPath === ':memory:') {
+      if (dbPath === ":memory:") {
         this.close();
         // Continue to reinitialize
       } else {
-        logger.warn('Database', 'Already initialized');
+        logger.warn("Database", "Already initialized");
         return;
       }
     }
 
-    logger.info('Database', 'Initializing better-sqlite3...');
+    logger.info("Database", "Initializing better-sqlite3...");
 
     // Ensure directory exists
     if (!fs.existsSync(DB_DIR)) {
       fs.mkdirSync(DB_DIR, { recursive: true });
-      logger.debug('Database', `Created data directory: ${DB_DIR}`);
+      logger.debug("Database", `Created data directory: ${DB_DIR}`);
     }
 
     // Get database path
@@ -59,18 +79,18 @@ export class DatabaseManager {
     this.db = new Database(dbPath);
 
     // Enable WAL mode for better performance
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('synchronous = NORMAL');
-    this.db.pragma('cache_size = -64000');  // 64MB cache
-    this.db.pragma('temp_store = memory');
-    this.db.pragma('busy_timeout = 5000');
-    this.db.pragma('foreign_keys = ON');
+    this.db.pragma("journal_mode = WAL");
+    this.db.pragma("synchronous = NORMAL");
+    this.db.pragma("cache_size = -64000"); // 64MB cache
+    this.db.pragma("temp_store = memory");
+    this.db.pragma("busy_timeout = 5000");
+    this.db.pragma("foreign_keys = ON");
 
     // Create tables
     this.createTables();
     this.initialized = true;
 
-    logger.info('Database', 'Database initialized successfully', {
+    logger.info("Database", "Database initialized successfully", {
       path: DB_PATH,
     });
   }
@@ -79,7 +99,7 @@ export class DatabaseManager {
    * Create database schema
    */
   private createTables(): void {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
 
     // Events table
     this.db.exec(`
@@ -122,7 +142,7 @@ export class DatabaseManager {
     // Run schema migrations for backward compatibility
     this.runMigrations();
 
-    logger.debug('Database', 'Tables and indexes created');
+    logger.debug("Database", "Tables and indexes created");
   }
 
   /**
@@ -141,49 +161,63 @@ export class DatabaseManager {
       pk: number;
     }>;
 
-    const existingColumns = new Set(result.map(col => col.name));
+    const existingColumns = new Set(result.map((col) => col.name));
 
     // Migration: Add commander column if missing
-    if (!existingColumns.has('commander')) {
-      logger.info('Database', "Migration: Adding 'commander' column");
-      this.db.exec('ALTER TABLE events ADD COLUMN commander TEXT');
+    if (!existingColumns.has("commander")) {
+      logger.info("Database", "Migration: Adding 'commander' column");
+      this.db.exec("ALTER TABLE events ADD COLUMN commander TEXT");
     }
 
     // Migration: Add system_name column if missing
-    if (!existingColumns.has('system_name')) {
-      logger.info('Database', "Migration: Adding 'system_name' column");
-      this.db.exec('ALTER TABLE events ADD COLUMN system_name TEXT');
+    if (!existingColumns.has("system_name")) {
+      logger.info("Database", "Migration: Adding 'system_name' column");
+      this.db.exec("ALTER TABLE events ADD COLUMN system_name TEXT");
     }
 
     // Migration: Add station_name column if missing
-    if (!existingColumns.has('station_name')) {
-      logger.info('Database', "Migration: Adding 'station_name' column");
-      this.db.exec('ALTER TABLE events ADD COLUMN station_name TEXT');
+    if (!existingColumns.has("station_name")) {
+      logger.info("Database", "Migration: Adding 'station_name' column");
+      this.db.exec("ALTER TABLE events ADD COLUMN station_name TEXT");
     }
 
     // Migration: Add body column if missing
-    if (!existingColumns.has('body')) {
-      logger.info('Database', "Migration: Adding 'body' column");
-      this.db.exec('ALTER TABLE events ADD COLUMN body TEXT');
+    if (!existingColumns.has("body")) {
+      logger.info("Database", "Migration: Adding 'body' column");
+      this.db.exec("ALTER TABLE events ADD COLUMN body TEXT");
     }
 
     // Migration: Add raw_json column if missing
-    if (!existingColumns.has('raw_json')) {
-      logger.info('Database', "Migration: Adding 'raw_json' column");
-      this.db.exec("ALTER TABLE events ADD COLUMN raw_json TEXT NOT NULL DEFAULT '{}'");
+    if (!existingColumns.has("raw_json")) {
+      logger.info("Database", "Migration: Adding 'raw_json' column");
+      this.db.exec(
+        "ALTER TABLE events ADD COLUMN raw_json TEXT NOT NULL DEFAULT '{}'",
+      );
     }
 
     // Migration: Add created_at column if missing
-    if (!existingColumns.has('created_at')) {
-      logger.info('Database', "Migration: Adding 'created_at' column");
-      this.db.exec("ALTER TABLE events ADD COLUMN created_at TEXT DEFAULT (datetime('now'))");
+    if (!existingColumns.has("created_at")) {
+      logger.info("Database", "Migration: Adding 'created_at' column");
+      this.db.exec(
+        "ALTER TABLE events ADD COLUMN created_at TEXT DEFAULT (datetime('now'))",
+      );
     }
 
-    logger.debug('Database', 'Schema migrations completed');
+    logger.debug("Database", "Schema migrations completed");
   }
 
   /**
    * Get database instance
+   *
+   * @returns {DatabaseType | null} Database instance or null if not initialized
+   *
+   * @example
+   * ```typescript
+   * const db = dbManager.getDatabase();
+   * if (db) {
+   *   const stmt = db.prepare('SELECT * FROM events');
+   * }
+   * ```
    */
   getDatabase(): DatabaseType | null {
     return this.db;
@@ -191,52 +225,71 @@ export class DatabaseManager {
 
   /**
    * Check if database is initialized
+   *
+   * @returns {boolean} True if database is ready for operations
    */
   isInitialized(): boolean {
     return this.initialized;
   }
 
   /**
-   * Execute raw SQL (for DDL operations)
+   * Execute raw SQL statement (for DDL operations)
+   *
+   * @param {string} sql - SQL statement to execute
+   * @throws {Error} If database not initialized
    */
   exec(sql: string): void {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
     this.db.exec(sql);
   }
 
   /**
-   * Prepare a statement
+   * Prepare a SQL statement for execution
+   *
+   * @param {string} sql - SQL statement to prepare
+   * @returns {import('better-sqlite3').Statement} Prepared statement
+   * @throws {Error} If database not initialized
    */
-  prepare(sql: string): import('better-sqlite3').Statement {
-    if (!this.db) throw new Error('Database not initialized');
+  prepare(sql: string): import("better-sqlite3").Statement {
+    if (!this.db) throw new Error("Database not initialized");
     return this.db.prepare(sql);
   }
 
   /**
-   * Run a transaction
+   * Execute a function within a database transaction
+   *
+   * All database operations in the function are atomic - either all succeed or all fail.
+   *
+   * @template T - Return type of the transaction function
+   * @param {() => T} fn - Function to execute within transaction
+   * @returns {T} Result of the transaction function
+   * @throws {Error} If database not initialized
    */
   transaction<T>(fn: () => T): T {
-    if (!this.db) throw new Error('Database not initialized');
+    if (!this.db) throw new Error("Database not initialized");
     const transaction = this.db.transaction(fn);
     return transaction();
   }
 
   /**
    * Close database connection with WAL checkpoint
+   *
+   * Performs a passive WAL checkpoint to ensure all data is written to main database file.
+   * Safe to call multiple times - subsequent calls are no-ops.
    */
   close(): void {
     if (this.isShuttingDown) return;
     this.isShuttingDown = true;
 
-    logger.info('Database', 'Closing database...');
+    logger.info("Database", "Closing database...");
 
     if (this.db) {
       try {
         // Checkpoint WAL to main database
-        this.db.pragma('wal_checkpoint(PASSIVE)');
+        this.db.pragma("wal_checkpoint(PASSIVE)");
         this.db.close();
       } catch (error) {
-        logger.error('Database', 'Error during database close', {
+        logger.error("Database", "Error during database close", {
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -244,7 +297,7 @@ export class DatabaseManager {
       this.initialized = false;
     }
 
-    logger.info('Database', 'Database closed successfully');
+    logger.info("Database", "Database closed successfully");
   }
 
   /**
@@ -269,7 +322,7 @@ export class DatabaseManager {
    */
   resetForTestingWithCleanup(): void {
     const dbPath = this.currentDbPath;
-    
+
     if (this.db) {
       try {
         this.db.close();
@@ -280,13 +333,13 @@ export class DatabaseManager {
     }
     this.initialized = false;
     this.currentDbPath = null;
-    
+
     // Delete database files if path is known
     if (dbPath) {
       try {
         fs.unlinkSync(dbPath);
-        fs.unlinkSync(dbPath + '-wal');
-        fs.unlinkSync(dbPath + '-shm');
+        fs.unlinkSync(dbPath + "-wal");
+        fs.unlinkSync(dbPath + "-shm");
       } catch (e) {
         // Ignore deletion errors
       }

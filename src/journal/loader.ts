@@ -1,13 +1,30 @@
 /**
- * JournalFastLoader - Optimized streaming journal loader
+ * JournalFastLoader - Optimized streaming journal loader for Elite Dangerous
  *
  * Features:
- * - Streaming with fs.createReadStream + readline (no full file load)
- * - Parallel processing (max 5 concurrent files)
- * - Bulk insert with transactions (500 events per batch)
- * - Progress callback for UI updates
- * - Incremental load (skip already processed files)
- * - Target: < 5 seconds for any number of files
+ * - **Streaming**: Uses `fs.createReadStream` + `readline` for memory efficiency (no full file load)
+ * - **Parallel processing**: Maximum 5 concurrent files for faster loading
+ * - **Bulk insert**: Transactions with 500 events per batch for optimal performance
+ * - **Progress callback**: Real-time progress updates for UI
+ * - **Incremental load**: Skips already processed files (by size and mtime)
+ * - **Priority loading**: Newest files loaded first for fast bootstrap
+ *
+ * Performance target: < 5 seconds for any number of journal files
+ *
+ * @example
+ * ```typescript
+ * const loader = new JournalFastLoader(journalPath);
+ *
+ * // Quick load (only 5 newest files)
+ * await loader.quickLoad((progress) => {
+ *   console.log(`Loaded ${progress.loaded} events from ${progress.currentFile}`);
+ * });
+ *
+ * // Full load (all files)
+ * await loader.fullLoad((progress) => {
+ *   console.log(`Progress: ${progress.percent}%`);
+ * });
+ * ```
  */
 
 import * as fs from "fs";
@@ -57,6 +74,9 @@ class Limiter {
   }
 }
 
+/**
+ * Progress information for journal loading
+ */
 export interface JournalProgress {
   loaded: number;
   total: number;
@@ -64,8 +84,14 @@ export interface JournalProgress {
   percent: number;
 }
 
+/**
+ * Callback function for progress updates
+ */
 export type ProgressCallback = (progress: JournalProgress) => void;
 
+/**
+ * Information about a processed journal file
+ */
 export interface ProcessedFile {
   filename: string;
   filesize: number;
@@ -83,6 +109,11 @@ export class JournalFastLoader {
   private totalEventsLoaded = 0;
   private processedFiles: Map<string, ProcessedFile> = new Map();
 
+  /**
+   * Create JournalFastLoader instance
+   *
+   * @param {string} journalPath - Path to Elite Dangerous journal directory
+   */
   constructor(journalPath: string) {
     this.journalPath = journalPath;
     this.limiter = new Limiter(MAX_CONCURRENT_FILES);
@@ -90,6 +121,12 @@ export class JournalFastLoader {
 
   /**
    * Get all journal files sorted by date (newest first)
+   *
+   * Journal files are named: Journal.YYYY-MM-DDTHHMMSS.01.log
+   * Sorting alphabetically in reverse order gives us newest first.
+   *
+   * @returns {Promise<string[]>} Array of journal filenames
+   * @private
    */
   private async getJournalFiles(): Promise<string[]> {
     const files = await fs.promises.readdir(this.journalPath);
@@ -102,7 +139,9 @@ export class JournalFastLoader {
   /**
    * Get file stats (size, mtime)
    */
-  private async getFileStats(filepath: string): Promise<{ size: number; mtime: number }> {
+  private async getFileStats(
+    filepath: string,
+  ): Promise<{ size: number; mtime: number }> {
     const stats = await fs.promises.stat(filepath);
     return { size: stats.size, mtime: stats.mtimeMs };
   }
@@ -110,15 +149,21 @@ export class JournalFastLoader {
   /**
    * Check if file was already processed (incremental load)
    */
-  private isFileProcessed(filename: string, currentStats: { size: number; mtime: number }): boolean {
+  private isFileProcessed(
+    filename: string,
+    currentStats: { size: number; mtime: number },
+  ): boolean {
     const processed = this.processedFiles.get(filename);
     if (!processed) return false;
 
     // Skip if file size and mtime haven't changed
-    return processed.filesize === currentStats.size && processed.mtime === currentStats.mtime;
+    return (
+      processed.filesize === currentStats.size &&
+      processed.mtime === currentStats.mtime
+    );
   }
 
-/**
+  /**
    * Parse a single line from journal with backward compatibility
    */
   private parseLine(line: string, filename: string): ParsedEventData | null {
@@ -127,15 +172,19 @@ export class JournalFastLoader {
       if (!event || !event.event) return null;
 
       // Normalize timestamp for old/new formats
-      const timestamp = event.timestamp || event.timestamp_local || new Date().toISOString();
-      
+      const timestamp =
+        event.timestamp || event.timestamp_local || new Date().toISOString();
+
       // Normalize event name (some old events may have different casing)
       const eventName = event.event;
-      
+
       // Extract fields with backward compatibility
-      const commander = event.cmdr || event.Commander || event.commander || undefined;
-      const system_name = event.StarSystem || event.system || event.System || undefined;
-      const station_name = event.StationName || event.station || event.Station || undefined;
+      const commander =
+        event.cmdr || event.Commander || event.commander || undefined;
+      const system_name =
+        event.StarSystem || event.system || event.System || undefined;
+      const station_name =
+        event.StationName || event.station || event.Station || undefined;
       const body = event.BodyName || event.body || event.Body || undefined;
 
       // Ensure raw_json is properly escaped if needed
@@ -159,7 +208,10 @@ export class JournalFastLoader {
         raw_json,
       };
     } catch (error) {
-      console.warn(`Failed to parse journal line: ${line.substring(0, 100)}...`, error);
+      console.warn(
+        `Failed to parse journal line: ${line.substring(0, 100)}...`,
+        error,
+      );
       return null;
     }
   }
@@ -170,7 +222,7 @@ export class JournalFastLoader {
    */
   private async loadFile(
     filepath: string,
-    progressCallback?: ProgressCallback
+    progressCallback?: ProgressCallback,
   ): Promise<number> {
     const filename = path.basename(filepath);
     const fileStats = await this.getFileStats(filepath);
@@ -245,21 +297,39 @@ export class JournalFastLoader {
 
   /**
    * Load all journal files with parallel processing
-   * Priority: newest files first (fast bootstrap)
    *
-   * @param progressCallback - Optional callback for progress updates
-   * @param priorityFiles - Number of files to load first for fast bootstrap (default: 3)
-   * @param loadAll - If false, only load priority files (default: true)
+   * Two-phase loading:
+   * 1. **Phase 1**: Load priority files (newest first) for fast bootstrap
+   * 2. **Phase 2**: Load remaining files in background
+   *
+   * @param {ProgressCallback} [progressCallback] - Optional callback for progress updates
+   * @param {number} [priorityFiles=3] - Number of files to load first for fast bootstrap
+   * @param {boolean} [loadAll=true] - If false, only load priority files
+   * @returns {Promise<number>} Total number of events loaded
+   *
+   * @example
+   * ```typescript
+   * // Load all files with progress
+   * const total = await loader.loadAllJournals((progress) => {
+   *   console.log(`Loaded ${progress.loaded} events from ${progress.currentFile}`);
+   * });
+   *
+   * // Quick load (only 5 newest files)
+   * await loader.loadAllJournals(undefined, 5, false);
+   * ```
    */
   async loadAllJournals(
     progressCallback?: ProgressCallback,
     priorityFiles: number = 3,
-    loadAll: boolean = true
+    loadAll: boolean = true,
   ): Promise<number> {
     this.totalEventsLoaded = 0;
 
     if (!fs.existsSync(this.journalPath)) {
-      logger.warn("Journal", `Journal path does not exist: ${this.journalPath}`);
+      logger.warn(
+        "Journal",
+        `Journal path does not exist: ${this.journalPath}`,
+      );
       return 0;
     }
 
@@ -278,7 +348,10 @@ export class JournalFastLoader {
     const background = allFiles.slice(priorityFiles);
 
     // Phase 1: Load priority files first (for fast UI bootstrap)
-    logger.info("Journal", `Phase 1: Loading ${priority.length} priority files...`);
+    logger.info(
+      "Journal",
+      `Phase 1: Loading ${priority.length} priority files...`,
+    );
 
     for (const filename of priority) {
       const filepath = path.join(this.journalPath, filename);
@@ -287,7 +360,10 @@ export class JournalFastLoader {
 
     // Phase 2: Load remaining files in background (if requested)
     if (loadAll && background.length > 0) {
-      logger.info("Journal", `Phase 2: Loading ${background.length} background files...`);
+      logger.info(
+        "Journal",
+        `Phase 2: Loading ${background.length} background files...`,
+      );
 
       for (const filename of background) {
         const filepath = path.join(this.journalPath, filename);
@@ -295,13 +371,21 @@ export class JournalFastLoader {
       }
     }
 
-    logger.info("Journal", `Total loaded: ${this.totalEventsLoaded} events from ${totalFiles} files`);
+    logger.info(
+      "Journal",
+      `Total loaded: ${this.totalEventsLoaded} events from ${totalFiles} files`,
+    );
     return this.totalEventsLoaded;
   }
 
   /**
    * Quick load - only newest files for fast startup
-   * Use this for initial bootstrap, then call loadAllJournals for full sync
+   *
+   * Loads only 5 most recent journal files for fast UI bootstrap.
+   * Use this for initial bootstrap, then call `fullLoad()` for complete sync.
+   *
+   * @param {ProgressCallback} [progressCallback] - Optional callback for progress updates
+   * @returns {Promise<number>} Total number of events loaded
    */
   async quickLoad(progressCallback?: ProgressCallback): Promise<number> {
     return this.loadAllJournals(progressCallback, 5, false);
@@ -309,13 +393,20 @@ export class JournalFastLoader {
 
   /**
    * Full load - all files with progress tracking
+   *
+   * Loads all journal files with 3-file priority bootstrap.
+   *
+   * @param {ProgressCallback} [progressCallback] - Optional callback for progress updates
+   * @returns {Promise<number>} Total number of events loaded
    */
   async fullLoad(progressCallback?: ProgressCallback): Promise<number> {
     return this.loadAllJournals(progressCallback, 3, true);
   }
 
   /**
-   * Get count of processed files
+   * Get count of processed files (for incremental load tracking)
+   *
+   * @returns {number} Number of files already processed in this session
    */
   getProcessedFilesCount(): number {
     return this.processedFiles.size;
@@ -323,6 +414,8 @@ export class JournalFastLoader {
 
   /**
    * Get total events loaded in last run
+   *
+   * @returns {number} Total number of events loaded
    */
   getTotalEventsLoaded(): number {
     return this.totalEventsLoaded;
@@ -331,11 +424,16 @@ export class JournalFastLoader {
 
 /**
  * Utility function to create and run loader
+ *
+ * @param {string} journalPath - Path to Elite Dangerous journal directory
+ * @param {ProgressCallback} [progressCallback] - Optional callback for progress updates
+ * @param {boolean} [fullLoad=false] - If true, load all files; otherwise quick load
+ * @returns {Promise<number>} Total number of events loaded
  */
 export async function loadJournalsWithProgress(
   journalPath: string,
   progressCallback?: ProgressCallback,
-  fullLoad: boolean = false
+  fullLoad: boolean = false,
 ): Promise<number> {
   const loader = new JournalFastLoader(journalPath);
 

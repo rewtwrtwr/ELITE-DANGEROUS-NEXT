@@ -1,17 +1,36 @@
 /**
- * Event Repository - CRUD operations for events
- * Using better-sqlite3 API
+ * Event Repository - CRUD operations for Elite Dangerous journal events
+ *
+ * Uses better-sqlite3 for synchronous database operations.
+ * All methods handle database errors gracefully and log failures.
+ *
+ * @example
+ * ```typescript
+ * import { eventRepository } from './EventRepository.js';
+ *
+ * // Insert single event
+ * const eventId = eventRepository.insertEvent(parsedData);
+ *
+ * // Insert batch of events
+ * const count = eventRepository.insertEvents(eventsArray);
+ *
+ * // Get paginated events
+ * const { events, total } = eventRepository.getEvents(50, 0);
+ *
+ * // Get statistics
+ * const stats = eventRepository.getStats();
+ * ```
  */
 
-import { dbManager } from './DatabaseManager.js';
+import { dbManager } from "./DatabaseManager.js";
 import {
   EliteEvent,
   EventStats,
   PaginatedEvents,
   CursorPaginationResult,
-} from '../types/elite.js';
-import { logger } from '../utils/logger.js';
-import type Database from 'better-sqlite3';
+} from "../types/elite.js";
+import { logger } from "../utils/logger.js";
+import type Database from "better-sqlite3";
 
 export interface ParsedEventData {
   filename?: string;
@@ -27,16 +46,33 @@ export interface ParsedEventData {
 class EventRepository {
   /**
    * Generate deterministic event_id from timestamp, event type and unique key
-   * Must be deterministic: same log line always produces same event_id
+   *
+   * Must be deterministic: same log line always produces same event_id.
+   * Extracts unique key from JSON fields (Name, StarSystem, BodyName, etc.)
+   * or falls back to parsed data fields (system_name, station_name, body).
+   *
+   * @param {ParsedEventData} data - Parsed event data
+   * @returns {string} Deterministic event ID in format: `{timestamp}_{event}_{uniqueKey}`
+   *
+   * @example
+   * ```typescript
+   * const eventId = generateEventId({
+   *   timestamp: '2024-01-01T12:00:00Z',
+   *   event: 'FSDJump',
+   *   system_name: 'Sol',
+   *   raw_json: '{"event":"FSDJump","StarSystem":"Sol"}'
+   * });
+   * // Returns: "2024-01-01T12:00:00Z_FSDJump_Sol"
+   * ```
    */
   generateEventId(data: ParsedEventData): string {
-    const timestamp = data.timestamp || '';
-    const event = data.event || 'Unknown';
+    const timestamp = data.timestamp || "";
+    const event = data.event || "Unknown";
     const base = `${timestamp}_${event}`;
 
     try {
       // Try to extract unique key from common events
-      let uniqueKey = '';
+      let uniqueKey = "";
 
       // Try to parse raw_json first
       if (data.raw_json) {
@@ -49,7 +85,7 @@ class EventRepository {
           else if (parsed.MissionName) uniqueKey = parsed.MissionName;
         } catch {
           // JSON parsing failed, try fallback approach
-          uniqueKey = '';
+          uniqueKey = "";
         }
       }
 
@@ -69,6 +105,12 @@ class EventRepository {
 
   /**
    * Convert parsed event data to EliteEvent format
+   *
+   * Validates and ensures raw_json is valid JSON string.
+   * If raw_json is invalid, reconstructs it from parsed data fields.
+   *
+   * @param {ParsedEventData} data - Parsed journal event data
+   * @returns {EliteEvent} EliteEvent object with all required fields
    */
   toEliteEvent(data: ParsedEventData): EliteEvent {
     const event_id = this.generateEventId(data);
@@ -120,12 +162,27 @@ class EventRepository {
   }
 
   /**
-   * Insert a single event
+   * Insert a single event into the database
+   *
+   * Uses INSERT OR REPLACE to handle duplicates gracefully.
+   * Returns event_id on success, null on failure.
+   *
+   * @param {ParsedEventData} data - Parsed event data to insert
+   * @returns {string | null} Event ID if inserted successfully, null otherwise
+   *
+   * @example
+   * ```typescript
+   * const eventId = eventRepository.insertEvent({
+   *   timestamp: '2024-01-01T12:00:00Z',
+   *   event: 'FSDJump',
+   *   raw_json: '{"event":"FSDJump"}'
+   * });
+   * ```
    */
   insertEvent(data: ParsedEventData): string | null {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return null;
     }
 
@@ -147,12 +204,12 @@ class EventRepository {
         cleaned.system_name,
         cleaned.station_name,
         cleaned.body,
-        cleaned.raw_json
+        cleaned.raw_json,
       );
 
       return result.changes > 0 ? event.event_id : null;
     } catch (error) {
-      logger.error('Repository', 'Error inserting event', {
+      logger.error("Repository", "Error inserting event", {
         error: error instanceof Error ? error.message : String(error),
         eventId: event.event_id,
       });
@@ -162,11 +219,24 @@ class EventRepository {
 
   /**
    * Insert multiple events in a batch using transaction
+   *
+   * All events are inserted atomically - either all succeed or all fail.
+   * Uses INSERT OR REPLACE to handle duplicates.
+   *
+   * @param {ParsedEventData[]} dataList - Array of parsed event data
+   * @returns {number} Number of events successfully inserted
+   *
+   * @example
+   * ```typescript
+   * const events = parseJournalFile('Journal.log');
+   * const count = eventRepository.insertEvents(events);
+   * console.log(`Inserted ${count} events`);
+   * ```
    */
   insertEvents(dataList: ParsedEventData[]): number {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return 0;
     }
 
@@ -189,7 +259,7 @@ class EventRepository {
             cleaned.system_name,
             cleaned.station_name,
             cleaned.body,
-            cleaned.raw_json
+            cleaned.raw_json,
           );
         }
       });
@@ -197,7 +267,7 @@ class EventRepository {
       transaction(dataList);
       return dataList.length;
     } catch (error) {
-      logger.error('Repository', 'Error inserting events', {
+      logger.error("Repository", "Error inserting events", {
         error: error instanceof Error ? error.message : String(error),
       });
       return 0;
@@ -205,18 +275,33 @@ class EventRepository {
   }
 
   /**
-   * Get paginated events (legacy support)
+   * Get paginated events (legacy offset-based pagination)
+   *
+   * @param {number} limit - Maximum number of events to return (default: 50)
+   * @param {number} offset - Number of events to skip (default: 0)
+   * @returns {PaginatedEvents} Object with events array, total count, limit and offset
+   *
+   * @example
+   * ```typescript
+   * // Get first page
+   * const page1 = eventRepository.getEvents(50, 0);
+   *
+   * // Get second page
+   * const page2 = eventRepository.getEvents(50, 50);
+   * ```
    */
   getEvents(limit = 50, offset = 0): PaginatedEvents {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return { events: [], total: 0, limit, offset };
     }
 
     try {
       // Get total count
-      const totalRow = db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number };
+      const totalRow = db
+        .prepare("SELECT COUNT(*) as count FROM events")
+        .get() as { count: number };
       const total = totalRow.count;
 
       // Get paginated events
@@ -230,7 +315,7 @@ class EventRepository {
 
       const rows = stmt.all(limit, offset) as Array<Record<string, unknown>>;
 
-      const events: EliteEvent[] = rows.map(row => ({
+      const events: EliteEvent[] = rows.map((row) => ({
         event_id: row.event_id as string,
         timestamp: row.timestamp as string,
         event_type: row.event_type as string,
@@ -244,7 +329,7 @@ class EventRepository {
 
       return { events, total, limit, offset };
     } catch (error) {
-      logger.error('Repository', 'Error getting events', {
+      logger.error("Repository", "Error getting events", {
         error: error instanceof Error ? error.message : String(error),
       });
       return { events: [], total: 0, limit, offset };
@@ -253,7 +338,27 @@ class EventRepository {
 
   /**
    * Get events with cursor-based pagination (for infinite scroll)
-   * Uses timestamp as cursor for efficient pagination
+   *
+   * Uses timestamp as cursor for efficient pagination.
+   * Returns events older than the cursor timestamp (DESC order).
+   * Fetches limit+1 events to determine if there are more results.
+   *
+   * @param {string | null} cursor - Timestamp of last visible event (null for first page)
+   * @param {number} limit - Maximum number of events to return (default: 50)
+   * @returns {CursorPaginationResult} Object with data, nextCursor, hasMore flag and total count
+   *
+   * @example
+   * ```typescript
+   * // First page
+   * const page1 = eventRepository.getEventsByCursor(null, 50);
+   *
+   * // Next page (using cursor from previous response)
+   * const page2 = eventRepository.getEventsByCursor(page1.nextCursor, 50);
+   *
+   * if (page2.hasMore) {
+   *   // More pages available
+   * }
+   * ```
    */
   getEventsByCursor(
     cursor: string | null,
@@ -261,13 +366,15 @@ class EventRepository {
   ): CursorPaginationResult {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return { data: [], nextCursor: null, hasMore: false, total: 0 };
     }
 
     try {
       // Get total count
-      const totalRow = db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number };
+      const totalRow = db
+        .prepare("SELECT COUNT(*) as count FROM events")
+        .get() as { count: number };
       const total = totalRow.count;
 
       let events: EliteEvent[] = [];
@@ -285,8 +392,10 @@ class EventRepository {
           LIMIT ?
         `);
 
-        const rows = stmt.all(cursor, limit + 1) as Array<Record<string, unknown>>;
-        events = rows.map(row => ({
+        const rows = stmt.all(cursor, limit + 1) as Array<
+          Record<string, unknown>
+        >;
+        events = rows.map((row) => ({
           event_id: row.event_id as string,
           timestamp: row.timestamp as string,
           event_type: row.event_type as string,
@@ -308,7 +417,7 @@ class EventRepository {
         `);
 
         const rows = stmt.all(limit + 1) as Array<Record<string, unknown>>;
-        events = rows.map(row => ({
+        events = rows.map((row) => ({
           event_id: row.event_id as string,
           timestamp: row.timestamp as string,
           event_type: row.event_type as string,
@@ -333,7 +442,7 @@ class EventRepository {
 
       return { data: events, nextCursor, hasMore, total };
     } catch (error) {
-      logger.error('Repository', 'Error getting events by cursor', {
+      logger.error("Repository", "Error getting events by cursor", {
         error: error instanceof Error ? error.message : String(error),
       });
       return { data: [], nextCursor: null, hasMore: false, total: 0 };
@@ -341,12 +450,24 @@ class EventRepository {
   }
 
   /**
-   * Get latest event, optionally filtered by type
+   * Get latest event, optionally filtered by event type
+   *
+   * @param {string} [eventType] - Optional event type filter (e.g., 'FSDJump')
+   * @returns {EliteEvent | null} Latest event or null if no events found
+   *
+   * @example
+   * ```typescript
+   * // Get latest event overall
+   * const latest = eventRepository.getLatestEvent();
+   *
+   * // Get latest FSDJump event
+   * const latestJump = eventRepository.getLatestEvent('FSDJump');
+   * ```
    */
   getLatestEvent(eventType?: string): EliteEvent | null {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return null;
     }
 
@@ -354,22 +475,30 @@ class EventRepository {
       let row: Record<string, unknown>;
 
       if (eventType) {
-        row = db.prepare(`
+        row = db
+          .prepare(
+            `
           SELECT id, event_id, timestamp, event_type, commander, system_name,
                  station_name, body, raw_json, created_at
           FROM events
           WHERE event_type = ?
           ORDER BY timestamp DESC
           LIMIT 1
-        `).get(eventType) as Record<string, unknown>;
+        `,
+          )
+          .get(eventType) as Record<string, unknown>;
       } else {
-        row = db.prepare(`
+        row = db
+          .prepare(
+            `
           SELECT id, event_id, timestamp, event_type, commander, system_name,
                  station_name, body, raw_json, created_at
           FROM events
           ORDER BY timestamp DESC
           LIMIT 1
-        `).get() as Record<string, unknown>;
+        `,
+          )
+          .get() as Record<string, unknown>;
       }
 
       if (!row) {
@@ -388,7 +517,7 @@ class EventRepository {
         created_at: row.created_at as string | undefined,
       };
     } catch (error) {
-      logger.error('Repository', 'Error getting latest event', {
+      logger.error("Repository", "Error getting latest event", {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
@@ -397,19 +526,29 @@ class EventRepository {
 
   /**
    * Get total event count
+   *
+   * @returns {number} Total number of events in database, 0 if database not initialized
+   *
+   * @example
+   * ```typescript
+   * const count = eventRepository.count();
+   * console.log(`Total events: ${count}`);
+   * ```
    */
   count(): number {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return 0;
     }
 
     try {
-      const row = db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number };
+      const row = db.prepare("SELECT COUNT(*) as count FROM events").get() as {
+        count: number;
+      };
       return row.count;
     } catch (error) {
-      logger.error('Repository', 'Error counting events', {
+      logger.error("Repository", "Error counting events", {
         error: error instanceof Error ? error.message : String(error),
       });
       return 0;
@@ -417,12 +556,27 @@ class EventRepository {
   }
 
   /**
-   * Get event statistics
+   * Get event statistics including counts by type, unique systems, and timestamp range
+   *
+   * @returns {EventStats} Object containing:
+   *   - totalEvents: Total number of events
+   *   - eventsByType: Count of events grouped by type
+   *   - uniqueSystems: Number of unique star systems visited
+   *   - firstEvent: Timestamp of earliest event
+   *   - lastEvent: Timestamp of latest event
+   *
+   * @example
+   * ```typescript
+   * const stats = eventRepository.getStats();
+   * console.log(`Total events: ${stats.totalEvents}`);
+   * console.log(`Unique systems: ${stats.uniqueSystems}`);
+   * console.log(`Events by type:`, stats.eventsByType);
+   * ```
    */
   getStats(): EventStats {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return {
         totalEvents: 0,
         eventsByType: {},
@@ -436,11 +590,15 @@ class EventRepository {
       const totalEvents = this.count();
 
       // Get events by type
-      const typeRows = db.prepare(`
+      const typeRows = db
+        .prepare(
+          `
         SELECT event_type, COUNT(*) as count
         FROM events
         GROUP BY event_type
-      `).all() as Array<{ event_type: string; count: number }>;
+      `,
+        )
+        .all() as Array<{ event_type: string; count: number }>;
 
       const eventsByType: Record<string, number> = {};
       for (const row of typeRows) {
@@ -448,19 +606,27 @@ class EventRepository {
       }
 
       // Get unique systems count
-      const systemsRow = db.prepare(`
+      const systemsRow = db
+        .prepare(
+          `
         SELECT COUNT(DISTINCT system_name) as count
         FROM events
         WHERE system_name IS NOT NULL AND system_name != ''
-      `).get() as { count: number };
+      `,
+        )
+        .get() as { count: number };
 
       const uniqueSystems = systemsRow?.count || 0;
 
       // Get first and last event timestamps
-      const timeRow = db.prepare(`
+      const timeRow = db
+        .prepare(
+          `
         SELECT MIN(timestamp) as first, MAX(timestamp) as last
         FROM events
-      `).get() as { first: string | null; last: string | null };
+      `,
+        )
+        .get() as { first: string | null; last: string | null };
 
       const firstEvent = timeRow?.first || null;
       const lastEvent = timeRow?.last || null;
@@ -473,7 +639,7 @@ class EventRepository {
         lastEvent,
       };
     } catch (error) {
-      logger.error('Repository', 'Error getting stats', {
+      logger.error("Repository", "Error getting stats", {
         error: error instanceof Error ? error.message : String(error),
       });
       return {
@@ -494,13 +660,15 @@ class EventRepository {
   getAllEvents(limit?: number): { data: EliteEvent[]; total: number } {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return { data: [], total: 0 };
     }
 
     try {
       // Get total count
-      const totalRow = db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number };
+      const totalRow = db
+        .prepare("SELECT COUNT(*) as count FROM events")
+        .get() as { count: number };
       const total = totalRow.count;
 
       // Build query with optional limit
@@ -518,7 +686,7 @@ class EventRepository {
       const stmt = db.prepare(query);
       const rows = stmt.all() as Array<Record<string, unknown>>;
 
-      const events: EliteEvent[] = rows.map(row => ({
+      const events: EliteEvent[] = rows.map((row) => ({
         event_id: row.event_id as string,
         timestamp: row.timestamp as string,
         event_type: row.event_type as string,
@@ -531,12 +699,12 @@ class EventRepository {
       }));
 
       logger.info(
-        'Repository',
-        `Loaded ${events.length} events${limit && limit > 0 ? ` (limited to ${limit})` : ' (all events)'}`,
+        "Repository",
+        `Loaded ${events.length} events${limit && limit > 0 ? ` (limited to ${limit})` : " (all events)"}`,
       );
       return { data: events, total };
     } catch (error) {
-      logger.error('Repository', 'Error getting all events', {
+      logger.error("Repository", "Error getting all events", {
         error: error instanceof Error ? error.message : String(error),
       });
       return { data: [], total: 0 };
@@ -550,7 +718,7 @@ class EventRepository {
   migrateOldEvents(): number {
     const db = dbManager.getDatabase();
     if (!db) {
-      logger.error('Repository', 'Database not initialized');
+      logger.error("Repository", "Database not initialized");
       return 0;
     }
 
@@ -589,12 +757,15 @@ class EventRepository {
       }
 
       if (migratedCount > 0) {
-        logger.info('Repository', `Migrated ${migratedCount} old events to new format`);
+        logger.info(
+          "Repository",
+          `Migrated ${migratedCount} old events to new format`,
+        );
       }
 
       return migratedCount;
     } catch (error) {
-      logger.error('Repository', 'Error migrating old events', {
+      logger.error("Repository", "Error migrating old events", {
         error: error instanceof Error ? error.message : String(error),
       });
       return 0;
