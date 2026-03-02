@@ -2,24 +2,39 @@
 
 /**
  * Validate Clean Build Script
- * 
+ *
  * Ensures that development metadata folders are excluded from build artifacts.
  * Used by prepublishOnly hook to prevent accidental inclusion of dev files.
- * 
+ *
+ * Performance Optimized (ENH-003):
+ * - Parallel checks using Promise.all()
+ * - Target: < 1 second execution time
+ * - Async file system operations
+ *
  * Checks:
- * 1. .specify/ folder should NOT exist in dist/
- * 2. conductor/ folder should NOT exist in dist/
- * 3. specs/ folder should NOT exist in dist/
- * 4. .npmignore exists and contains required exclusions
- * 5. dist/ contains only expected files (if it exists)
+ * 1. .npmignore exists and contains required exclusions
+ * 2. dist/ folder is clean (forbidden folders + patterns)
+ * 3. Development folders exist in root
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { readFile, readdir, access } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { performance } from 'perf_hooks';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const rootDir = resolve(__dirname, '..');
+
+// Helper function to check if file/folder exists (async)
+async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Colors for console output
 const colors = {
@@ -78,77 +93,88 @@ const REQUIRED_NPM_IGNORE_ENTRIES = [
   'node_modules/',
 ];
 
-let exitCode = 0;
-
-info('Validating clean build configuration...\n');
-
-// Check 1: Verify .npmignore exists
-const npmIgnorePath = join(rootDir, '.npmignore');
-if (!existsSync(npmIgnorePath)) {
-  error('.npmignore file does not exist');
-  exitCode = 1;
-} else {
-  success('.npmignore file exists');
+/**
+ * Check if .npmignore exists and contains required entries
+ */
+async function checkNpmIgnore() {
+  const npmIgnorePath = join(rootDir, '.npmignore');
+  const issues = [];
   
-  // Check 2: Verify .npmignore contains required entries
   try {
-    const npmIgnoreContent = readFileSync(npmIgnorePath, 'utf-8');
+    if (!await exists(npmIgnorePath)) {
+      issues.push({ type: 'error', message: '.npmignore file does not exist' });
+      return issues;
+    }
+    
+    success('.npmignore file exists');
+    
+    const npmIgnoreContent = await readFile(npmIgnorePath, 'utf-8');
     
     for (const entry of REQUIRED_NPM_IGNORE_ENTRIES) {
       if (!npmIgnoreContent.includes(entry)) {
-        error(`.npmignore missing required entry: ${entry}`);
-        exitCode = 1;
+        issues.push({ type: 'error', message: `.npmignore missing required entry: ${entry}` });
       } else {
         success(`.npmignore contains: ${entry}`);
       }
     }
   } catch (err) {
-    error(`Failed to read .npmignore: ${err.message}`);
-    exitCode = 1;
+    issues.push({ type: 'error', message: `Failed to read .npmignore: ${err.message}` });
   }
-}
-
-// Check 3: Verify forbidden folders don't exist in dist/ (if dist exists)
-const distPath = join(rootDir, 'dist');
-if (existsSync(distPath)) {
-  info('\nChecking dist/ folder for forbidden files...');
-
-  for (const folder of FORBIDDEN_FOLDERS) {
-    const forbiddenPath = join(distPath, folder);
-    if (existsSync(forbiddenPath)) {
-      error(`Forbidden folder found in dist/: ${folder}/`);
-      exitCode = 1;
-    } else {
-      success(`${folder}/ not in dist/`);
-    }
-  }
-
-  // Check 3b: Verify forbidden file patterns in dist/
-  info('\nChecking dist/ for forbidden file patterns...');
-  const patternIssues = checkForbiddenPatterns(distPath);
   
-  if (patternIssues.length > 0) {
-    for (const issue of patternIssues) {
-      error(`Forbidden file pattern found: ${issue.file} (${issue.description})`);
-    }
-    exitCode = 1;
-  } else {
-    success('No forbidden file patterns found');
-  }
-} else {
-  warn('\ndist/ folder does not exist (run build first)');
+  return issues;
 }
 
 /**
- * Check for forbidden file patterns in a directory
- * @param {string} dirPath - Directory to check
- * @returns {Array<{file: string, description: string}>} Array of issues found
+ * Check dist/ folder for forbidden folders and file patterns
  */
-function checkForbiddenPatterns(dirPath) {
+async function checkDistFolder() {
+  const distPath = join(rootDir, 'dist');
   const issues = [];
   
   try {
-    const entries = readdirSync(dirPath, { withFileTypes: true });
+    if (!await exists(distPath)) {
+      issues.push({ type: 'warn', message: 'dist/ folder does not exist (run build first)' });
+      return issues;
+    }
+    
+    info('\nChecking dist/ folder for forbidden files...');
+    
+    // Check forbidden folders
+    for (const folder of FORBIDDEN_FOLDERS) {
+      const forbiddenPath = join(distPath, folder);
+      if (await exists(forbiddenPath)) {
+        issues.push({ type: 'error', message: `Forbidden folder found in dist/: ${folder}/` });
+      } else {
+        success(`${folder}/ not in dist/`);
+      }
+    }
+    
+    // Check forbidden file patterns
+    info('\nChecking dist/ for forbidden file patterns...');
+    const patternIssues = await checkForbiddenPatterns(distPath);
+    
+    if (patternIssues.length > 0) {
+      for (const issue of patternIssues) {
+        issues.push({ type: 'error', message: `Forbidden file pattern found: ${issue.file} (${issue.description})` });
+      }
+    } else {
+      success('No forbidden file patterns found');
+    }
+  } catch (err) {
+    issues.push({ type: 'error', message: `Failed to scan dist/: ${err.message}` });
+  }
+  
+  return issues;
+}
+
+/**
+ * Check for forbidden file patterns in a directory (recursive)
+ */
+async function checkForbiddenPatterns(dirPath) {
+  const issues = [];
+  
+  try {
+    const entries = await readdir(dirPath, { withFileTypes: true });
     
     for (const entry of entries) {
       const name = entry.name.toLowerCase();
@@ -158,7 +184,6 @@ function checkForbiddenPatterns(dirPath) {
       for (const { pattern, description } of FORBIDDEN_PATTERNS) {
         const patternLower = pattern.toLowerCase();
         
-        // Check if filename ends with pattern or contains pattern
         if (name.endsWith(patternLower) || 
             (pattern.endsWith('/') && entry.isDirectory() && name === pattern.slice(0, -1))) {
           issues.push({ file: fullPath, description });
@@ -166,7 +191,7 @@ function checkForbiddenPatterns(dirPath) {
         
         // Recursively check subdirectories (but not node_modules)
         if (entry.isDirectory() && name !== 'node_modules') {
-          const subIssues = checkForbiddenPatterns(fullPath);
+          const subIssues = await checkForbiddenPatterns(fullPath);
           issues.push(...subIssues);
         }
       }
@@ -178,28 +203,87 @@ function checkForbiddenPatterns(dirPath) {
   return issues;
 }
 
-// Check 4: Verify forbidden folders exist in root (development files)
-info('\nVerifying development metadata folders exist...');
-for (const folder of FORBIDDEN_FOLDERS) {
-  const folderPath = join(rootDir, folder);
-  if (existsSync(folderPath)) {
-    info(`  ${folder}/ exists in root (expected for development)`);
+/**
+ * Check that development folders exist in root (sanity check)
+ */
+async function checkDevFolders() {
+  const issues = [];
+  
+  info('\nVerifying development metadata folders exist...');
+  
+  for (const folder of FORBIDDEN_FOLDERS) {
+    const folderPath = join(rootDir, folder);
+    if (await exists(folderPath)) {
+      info(`  ${folder}/ exists in root (expected for development)`);
+    }
+  }
+  
+  return issues;
+}
+
+/**
+ * Main validation function - runs all checks in parallel
+ */
+async function runValidation() {
+  const startTime = performance.now();
+  
+  info('Validating clean build configuration...\n');
+  
+  // Run all independent checks in parallel
+  const [npmIgnoreIssues, distIssues, devFolderIssues] = await Promise.all([
+    checkNpmIgnore(),
+    checkDistFolder(),
+    checkDevFolders(),
+  ]);
+  
+  // Collect all issues
+  const allIssues = [...npmIgnoreIssues, ...distIssues, ...devFolderIssues];
+  const hasErrors = allIssues.some(issue => issue.type === 'error');
+  const hasWarnings = allIssues.some(issue => issue.type === 'warn');
+  
+  // Print warnings
+  if (hasWarnings) {
+    const warnings = allIssues.filter(issue => issue.type === 'warn');
+    for (const warning of warnings) {
+      warn(warning.message);
+    }
+  }
+  
+  // Print errors
+  if (hasErrors) {
+    const errors = allIssues.filter(issue => issue.type === 'error');
+    for (const err of errors) {
+      error(err.message);
+    }
+  }
+  
+  // Summary
+  const endTime = performance.now();
+  const duration = (endTime - startTime).toFixed(2);
+  
+  log('\n' + '='.repeat(50));
+  log(`Validation completed in ${duration}ms`);
+  log('='.repeat(50));
+  
+  if (!hasErrors) {
+    success('Clean build validation PASSED');
+    log('Ready for publication! 🚀');
+    return 0;
+  } else {
+    error('Clean build validation FAILED');
+    log('Please fix the issues above before publishing.');
+    log('\nCommon fixes:');
+    log('  - Ensure .npmignore contains all required entries');
+    log('  - Run "npm run build" to create dist/');
+    log('  - Verify no dev folders are copied to dist/');
+    return 1;
   }
 }
 
-// Summary
-log('\n' + '='.repeat(50));
-if (exitCode === 0) {
-  success('Clean build validation PASSED');
-  log('Ready for publication! 🚀');
-} else {
-  error('Clean build validation FAILED');
-  log('Please fix the issues above before publishing.');
-  log('\nCommon fixes:');
-  log('  - Ensure .npmignore contains all required entries');
-  log('  - Run "npm run build" to create dist/');
-  log('  - Verify no dev folders are copied to dist/');
-}
-log('='.repeat(50));
-
-process.exit(exitCode);
+// Run validation
+runValidation()
+  .then(exitCode => process.exit(exitCode))
+  .catch(err => {
+    error(`Unexpected error: ${err.message}`);
+    process.exit(1);
+  });
