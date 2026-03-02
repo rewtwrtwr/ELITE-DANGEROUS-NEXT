@@ -1,0 +1,68 @@
+# Development Metadata (Spec-Driven Development)
+.specify/
+conductor/
+specs/
+track-docs/
+
+# Build outputs
+dist/
+build/
+release/
+out/
+
+# Dependencies
+node_modules/
+
+# Test files
+__tests__/
+__mocks__/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+coverage/
+.nyc_output/
+
+# Development tools
+.vite/
+.cache/
+temp/
+tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation (exclude from npm package)
+*.md
+!README.md
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+
+# Config files (not needed in package)
+tsconfig.client.json
+tsconfig.node.json
+vite.config.ts
+jest.config.mjs
+.eslintrc*
+.prettierrc*
+
+# Scripts
+scripts/
