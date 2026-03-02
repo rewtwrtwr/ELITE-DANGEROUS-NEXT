@@ -510,12 +510,42 @@ Add a `--fix` flag to automatically remove forbidden files/folders from dist/.
 - None
 
 **Acceptance Criteria:**
-- [ ] `--fix` flag triggers interactive confirmation
-- [ ] User sees list of files to be deleted
-- [ ] User confirms before deletion
-- [ ] Files are removed safely
-- [ ] Validation re-runs after fix
-- [ ] Dry-run mode (`--fix --dry-run`) shows what would be deleted
+- [x] `--fix` flag triggers interactive confirmation
+- [x] User sees list of files to be deleted
+- [x] User confirms before deletion
+- [x] Files are removed safely
+- [x] Validation re-runs after fix
+- [x] Dry-run mode (`--fix --dry-run`) shows what would be deleted
+
+**Progress Notes:**
+- [2026-03-02] Started implementation
+- [2026-03-02] Added CLI argument parsing (--fix, --dry-run)
+- [2026-03-02] Implemented askQuestion() for interactive prompts
+- [2026-03-02] Implemented applyFixes() with confirmation
+- [2026-03-02] Added dry-run mode with preview
+- [2026-03-02] Added auto re-run after successful cleanup
+- [2026-03-02] Added npm scripts: validate:fix, validate:dry-run
+- [2026-03-02] Added tip message when validation fails
+- [2026-03-02] Committed: 2fa7278
+
+**Implementation Details:**
+- CLI arguments:
+  - --fix: Enable interactive cleanup mode
+  - --dry-run/-n: Preview mode (no deletions)
+- applyFixes() function:
+  - Shows list of files to delete
+  - Asks for y/N confirmation
+  - Deletes with rm() (recursive, force)
+  - Logs each deletion
+  - Reports summary (deleted, errors)
+- Auto re-run validation after cleanup
+- Added to package.json:
+  - "validate:fix": --fix flag
+  - "validate:dry-run": --fix --dry-run
+- 201 lines added (222 added, 21 removed)
+- Commit: 2fa7278
+
+**Phase 3 Status:** 4/5 tasks complete (80%)
 
 **Implementation Approach:**
 
