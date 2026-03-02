@@ -33,6 +33,10 @@
 - [x] Создать Product Definition (`conductor/product.md`)
 - [x] Создать Specification (`.specify/spec.md`)
 - [x] Создать Conductor Index (`conductor/index.md`)
+- [x] Добавить FR-7: Clean Release требования
+- [x] Создать `.npmignore` для исключения папок разработки
+- [x] Создать скрипт валидации чистоты билда
+- [x] Добавить `prepublishOnly` hook в package.json
 
 ---
 
@@ -44,11 +48,13 @@
 |------------|----------|
 | Тестов пройдено | 66/66 (100%) |
 | Время прогона тестов | < 3 секунды |
-| Страниц спецификации | 1 (spec.md) |
-| Страниц product definition | 1 (product.md) |
+| Страниц спецификации | 1 (spec.md, 1345 строк) |
+| Страниц product definition | 1 (product.md, 533 строки) |
 | User Stories документировано | 20+ |
 | API endpoints документировано | 7 |
 | Event categories | 11 |
+| Functional Requirements | 7 Epics, 40+ требований |
+| Артефактов Clean Release | 3 (.npmignore, validate script, hooks) |
 
 ### Artifacts Created
 
@@ -56,8 +62,8 @@
    - Vision и Value Proposition
    - User Personas (2 персонажа)
    - User Stories (6 Epics, 20+ stories)
-   - Functional Requirements
-   - Acceptance Criteria
+   - Functional Requirements (FR-1 через FR-7)
+   - Acceptance Criteria (AC-1 через AC-4)
    - Domain Model
 
 2. **`.specify/spec.md`** - Technical Specification
@@ -75,6 +81,16 @@
    - Current Phase Status
 
 4. **`conductor/tracks/EDN-010/metadata.json`** - Track Metadata
+
+5. **`.npmignore`** - npm package exclusion rules
+   - Исключение `.specify/`, `conductor/`, `specs/`
+   - Исключение test файлов и dev зависимостей
+   - 30+ правил исключения
+
+6. **`scripts/validate-clean-build.mjs`** - Build validation script
+   - Проверка наличия `.npmignore`
+   - Валидация отсутствия forbidden folders в dist/
+   - Автоматический запуск через `prepublishOnly`
 
 ---
 
