@@ -75,26 +75,40 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       });
 
       socket.on('journal:event', (data: { timestamp: string; event: string; data: Record<string, unknown> }) => {
-        console.log('[useWebSocket] Received journal:event:', data.event);
-        
-        const edEvent: EDEvent = {
-          id: crypto.randomUUID(),
-          timestamp: data.timestamp || new Date().toISOString(),
-          event: data.event,
-          data: data.data,
-          rawLine: JSON.stringify(data.data),
-        };
-        
-        setLastEvent(edEvent);
-        onEvent?.(edEvent);
+        try {
+          console.log('[useWebSocket] Received journal:event:', data.event);
+
+          const edEvent: EDEvent = {
+            id: crypto.randomUUID(),
+            timestamp: data.timestamp || new Date().toISOString(),
+            event: data.event,
+            data: data.data,
+            rawLine: JSON.stringify(data.data),
+          };
+
+          setLastEvent(edEvent);
+          onEvent?.(edEvent);
+        } catch (error) {
+          console.error('[useWebSocket] Error processing journal:event:', error);
+          // Don't rethrow - we want to continue processing other events
+        }
       });
 
       socket.on('stats:update', (data: { stats: Record<string, unknown>; lastEventTime: string | null; timestamp: string }) => {
-        console.log('[useWebSocket] Received stats:update');
+        try {
+          console.log('[useWebSocket] Received stats:update');
+          // Process stats update if needed
+        } catch (error) {
+          console.error('[useWebSocket] Error processing stats:update:', error);
+        }
       });
 
       socket.on('backfill:complete', (data: { totalEvents: number }) => {
-        console.log('[useWebSocket] Backfill complete, total events:', data.totalEvents);
+        try {
+          console.log('[useWebSocket] Backfill complete, total events:', data.totalEvents);
+        } catch (error) {
+          console.error('[useWebSocket] Error processing backfill:complete:', error);
+        }
       });
 
       socket.on('error', (err) => {

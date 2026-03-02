@@ -236,7 +236,11 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsReturn {
 
   // Start polling
   const startPolling = useCallback(() => {
-    if (pollingIntervalRef.current) return;
+    // Clear any existing interval before starting a new one to prevent memory leaks
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
 
     console.log("[useEvents] Starting polling");
     setIsLive(true);
@@ -264,12 +268,18 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsReturn {
     }
 
     return () => {
+      // Cleanup: abort any pending requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      stopPolling();
+      // Cleanup: clear polling interval
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setIsLive(false);
     };
-  }, [autoLoad, fetchInitialEvents, startPolling, stopPolling]);
+  }, [autoLoad, fetchInitialEvents, startPolling]);
 
   return {
     events,

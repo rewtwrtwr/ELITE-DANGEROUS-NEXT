@@ -503,20 +503,23 @@ class EventRepository {
       const totalRow = db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number };
       const total = totalRow.count;
 
-      // Build query with optional limit
-      let query = `
+      // Build query with optional limit (parameterized to prevent SQL injection)
+      const baseQuery = `
         SELECT id, event_id, timestamp, event_type, commander, system_name,
                station_name, body, raw_json, created_at
         FROM events
         ORDER BY timestamp DESC
       `;
 
+      let rows: Array<Record<string, unknown>>;
       if (limit && limit > 0) {
-        query += ` LIMIT ${limit}`;
+        // Use parameterized query instead of string interpolation
+        const stmt = db.prepare(baseQuery + ' LIMIT ?');
+        rows = stmt.all(limit) as Array<Record<string, unknown>>;
+      } else {
+        const stmt = db.prepare(baseQuery);
+        rows = stmt.all() as Array<Record<string, unknown>>;
       }
-
-      const stmt = db.prepare(query);
-      const rows = stmt.all() as Array<Record<string, unknown>>;
 
       const events: EliteEvent[] = rows.map(row => ({
         event_id: row.event_id as string,

@@ -37,7 +37,8 @@ export class DatabaseManager {
       const dbPath = process.env.TEST_DB_PATH;
       if (dbPath === ':memory:') {
         this.close();
-        // Continue to reinitialize
+        // Explicitly reset initialized flag to allow re-initialization
+        this.initialized = false;
       } else {
         logger.warn('Database', 'Already initialized');
         return;
