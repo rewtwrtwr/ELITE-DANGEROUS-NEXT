@@ -21,6 +21,7 @@ Thank you for your interest in contributing to Elite Dangerous NEXT! This guide 
 - [Submitting Changes](#-submitting-changes)
 - [Code Review](#-code-review)
 - [Style Guide](#-style-guide)
+- [Clean Release Build](#-clean-release-build)
 
 ---
 
@@ -317,6 +318,182 @@ export class DatabaseManager { }
 // 4. Exports
 export default DatabaseManager;
 ```
+
+---
+
+## 🧹 Clean Release Build
+
+### What is Clean Release?
+
+Our build process automatically excludes development metadata from published npm packages. This ensures that users receive only the files necessary to run the application, without internal documentation, specifications, or development tools.
+
+### Why This Matters
+
+- **Security:** Internal documentation (specifications, plans, meeting notes) doesn't leak to public packages
+- **Cleanliness:** Users get a minimal, focused distribution without unnecessary files
+- **Predictability:** Every build produces consistent, verified output
+- **Professionalism:** Clean packages reflect quality and attention to detail
+
+### Excluded Folders
+
+The following folders are **automatically excluded** from npm packages and release builds:
+
+| Folder | Purpose | Why Excluded |
+|--------|---------|--------------|
+| `.specify/` | Spec-Driven Development specifications | Internal dev documentation |
+| `conductor/` | Project tracking, plans, and workflows | Internal project management |
+| `specs/` | Feature specifications | Development artifacts |
+| `track-docs/` | Track documentation | Internal documentation |
+| `scripts/` | Build and utility scripts | Not needed at runtime |
+| `node_modules/` | Dependencies | Installed separately by npm |
+| `__tests__/` | Test files | Not needed in production |
+| `coverage/` | Test coverage reports | Development artifact |
+| `logs/` | Log files | Runtime-generated, not distributed |
+| `data/*.db` | Database files | User data, not part of package |
+
+### Validation
+
+Before publishing any package, **always** run the clean build validation:
+
+```bash
+# Run validation (should complete in < 2 seconds)
+npm run validate:clean
+
+# Expected output:
+# ℹ️  Validating clean build configuration...
+# ✅ .npmignore file exists
+# ✅ .npmignore contains: .specify/
+# ✅ .npmignore contains: conductor/
+# ✅ .npmignore contains: node_modules/
+# ✅ Clean build validation PASSED
+# Ready for publication! 🚀
+```
+
+**What validation checks:**
+1. `.npmignore` file exists
+2. `.npmignore` contains required exclusion entries
+3. `dist/` folder (if exists) doesn't contain forbidden folders
+
+### Automatic Validation
+
+Validation runs **automatically** before `npm publish` via the `prepublishOnly` hook. If validation fails, publication is **blocked**:
+
+```bash
+npm publish
+# → Runs: npm run validate:clean
+# → If PASS: Continues to publish
+# → If FAIL: Blocks with error message
+```
+
+### Troubleshooting
+
+#### Validation Fails: "Forbidden folder found in dist/"
+
+**Problem:**
+```
+❌ Forbidden folder found in dist/: .specify/
+```
+
+**Cause:** Build process accidentally copied development folders to `dist/`.
+
+**Solution:**
+```bash
+# 1. Clean dist folder
+npm run clean
+
+# 2. Rebuild
+npm run build
+
+# 3. Re-run validation
+npm run validate:clean
+
+# 4. If still failing, check build scripts for incorrect copy operations
+```
+
+#### Validation Fails: ".npmignore missing required entry"
+
+**Problem:**
+```
+❌ .npmignore missing required entry: .specify/
+```
+
+**Cause:** `.npmignore` file was modified and is missing required exclusion rules.
+
+**Solution:**
+```bash
+# 1. Open .npmignore in editor
+# 2. Add missing entry:
+.specify/
+conductor/
+specs/
+track-docs/
+
+# 3. Save and re-run validation
+npm run validate:clean
+```
+
+#### Validation Fails: ".npmignore file does not exist"
+
+**Problem:**
+```
+❌ .npmignore file does not exist
+```
+
+**Cause:** File was accidentally deleted or never created.
+
+**Solution:**
+```bash
+# 1. Restore from repository
+git checkout .npmignore
+
+# 2. Or recreate from .gitignore template
+# Copy relevant exclusion rules to new .npmignore file
+
+# 3. Re-run validation
+npm run validate:clean
+```
+
+#### Want to Manually Clean dist/?
+
+**Use with caution:** Only do this if you understand the consequences.
+
+```bash
+# Manual cleanup (if automated build fails)
+rm -rf dist/.specify dist/conductor dist/specs
+
+# Or on Windows (PowerShell)
+Remove-Item -Recurse -Force dist\.specify, dist\conductor, dist\specs -ErrorAction SilentlyContinue
+
+# Then rebuild
+npm run build
+```
+
+### For Maintainers
+
+If you're a maintainer preparing a release:
+
+1. **Before release:**
+   ```bash
+   npm run validate:clean
+   ```
+
+2. **Review what will be published:**
+   ```bash
+   npm pack --dry-run
+   # Lists all files that would be included
+   ```
+
+3. **If validation fails:**
+   - Do NOT bypass validation
+   - Fix the root cause
+   - Re-run validation
+   - Only publish after validation passes
+
+### Questions?
+
+- **Why is my folder being excluded?** Check `.npmignore` for the exclusion rule
+- **Can I add new exclusions?** Submit a PR to update `.npmignore` and `validate-clean-build.mjs`
+- **Validation is too strict?** Discuss in GitHub Issues (but don't bypass it!)
 
 ---
 
