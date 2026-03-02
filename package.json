@@ -16,7 +16,9 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.mjs --coverage",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.mjs --ci --coverage --maxWorkers=2",
     "prepublishOnly": "node scripts/validate-clean-build.mjs",
-    "validate:clean": "node scripts/validate-clean-build.mjs"
+    "validate:clean": "node scripts/validate-clean-build.mjs",
+    "validate:fix": "node scripts/validate-clean-build.mjs --fix",
+    "validate:dry-run": "node scripts/validate-clean-build.mjs --fix --dry-run"
   },
   "keywords": [
     "elite-dangerous",
