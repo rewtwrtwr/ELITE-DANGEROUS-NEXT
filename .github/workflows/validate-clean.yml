@@ -1,0 +1,37 @@
+name: Clean Build Validation
+
+on:
+  push:
+    branches: ['v1.0.1-pre', 'main']
+  pull_request:
+    branches: ['v1.0.1-pre', 'main']
+
+jobs:
+  validate-clean:
+    name: Validate Clean Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run clean build validation
+      run: npm run validate:clean
+    
+    - name: Upload validation results (if failed)
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: validation-output
+        path: |
+          .npmignore
+        retention-days: 7
