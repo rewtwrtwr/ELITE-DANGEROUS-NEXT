@@ -9,6 +9,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
 [![GitHub](https://img.shields.io/github/last-commit/rewtwrtwr/ELITE-DANGEROUS-NEXT/v1.0.0-beta)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
 [![Release](https://img.shields.io/github/v/release/rewtwrtwr/ELITE-DANGEROUS-NEXT?label=release)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.0-beta)
+[![Clean Build](https://img.shields.io/badge/build-clean-brightgreen.svg)](CONTRIBUTING.md#clean-release-build)
 
 > 🎮 **Продвинутый анализатор журналов Elite Dangerous с real-time отслеживанием, статистикой и веб-интерфейсом**
 
@@ -58,6 +59,13 @@
 - ✅ 100% покрытие тестами (66/66 passing)
 - ⚡ In-memory SQLite для unit тестов
 - 🚀 < 3 секунд время прогона всех тестов
+
+### 🧹 Clean Release Build
+- 🛡️ Автоматическое исключение метаданных разработки из релизных пакетов
+- ✅ Pre-publish валидация чистоты сборки (`npm run validate:clean`)
+- 📦 Чистые и предсказуемые дистрибутивы для пользователей
+- 🔒 Безопасность: внутренняя документация не попадает в публичные пакеты
+- 📖 [Подробнее в CONTRIBUTING.md](CONTRIBUTING.md#clean-release-build)
 
 ---
 
