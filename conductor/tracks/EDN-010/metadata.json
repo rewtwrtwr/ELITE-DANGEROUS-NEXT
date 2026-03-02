@@ -1,0 +1,22 @@
+{
+  "trackId": "EDN-010",
+  "title": "Spec-Driven Development Setup",
+  "status": "complete",
+  "createdAt": "2026-03-02T10:00:00.000Z",
+  "completedAt": "2026-03-02T12:00:00.000Z",
+  "author": "AI Agent",
+  "description": "Инициализация Spec-Driven Development: реверс-инжиниринг существующего кода v1.0.1-pre и создание спецификации spec.md",
+  "tags": ["specification", "sdd", "brownfield", "documentation"],
+  "artifacts": [
+    "conductor/product.md",
+    "conductor/index.md",
+    ".specify/spec.md"
+  ],
+  "metrics": {
+    "testsPassing": 66,
+    "testsTotal": 66,
+    "coverage": "100%",
+    "specPages": 1,
+    "productDefinitionPages": 1
+  }
+}
