@@ -268,12 +268,36 @@ Create a GitHub Actions workflow that runs clean build validation on every push 
 - None (can be implemented independently)
 
 **Acceptance Criteria:**
-- [ ] Workflow runs on `push` to `v1.0.1-pre` and `main`
-- [ ] Workflow runs on `pull_request` to `v1.0.1-pre` and `main`
-- [ ] Job installs dependencies (`npm install`)
-- [ ] Job runs `npm run validate:clean`
-- [ ] Workflow fails if validation fails
-- [ ] Workflow name: "Clean Build Validation"
+- [x] Workflow runs on `push` to `v1.0.1-pre` and `main`
+- [x] Workflow runs on `pull_request` to `v1.0.1-pre` and `main`
+- [x] Job installs dependencies (`npm install`)
+- [x] Job runs `npm run validate:clean`
+- [x] Workflow fails if validation fails
+- [x] Workflow name: "Clean Build Validation"
+
+**Progress Notes:**
+- [2026-03-02] Started implementation
+- [2026-03-02] Created validate-clean.yml workflow (37 lines)
+- [2026-03-02] Configured triggers for push/PR to v1.0.1-pre and main
+- [2026-03-02] Added Node.js 20 setup with npm caching
+- [2026-03-02] Added artifact upload on failure
+- [2026-03-02] Committed: 2f17fbc
+
+**Implementation Details:**
+- Workflow includes:
+  - Name: Clean Build Validation
+  - Triggers: push/PR to v1.0.1-pre, main
+  - Runner: ubuntu-latest
+  - Steps:
+    1. Checkout code (actions/checkout@v4)
+    2. Setup Node.js 20 (actions/setup-node@v4)
+    3. Install dependencies (npm ci)
+    4. Run validation (npm run validate:clean)
+    5. Upload artifacts on failure
+- 37 lines added
+- Commit: 2f17fbc
+
+**Phase 3 Status:** 1/5 tasks complete (20%)
 
 **Workflow Content:**
 ```yaml
