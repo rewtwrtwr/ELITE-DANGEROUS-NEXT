@@ -354,11 +354,38 @@ Extend validation script to check for forbidden file patterns (not just folders)
 - None
 
 **Acceptance Criteria:**
-- [ ] Script checks for `*.log` files in dist/
-- [ ] Script checks for `.env` files in dist/
-- [ ] Script checks for `*.test.ts` files in dist/
-- [ ] Script reports each violation separately
-- [ ] All checks must pass for validation to succeed
+- [x] Script checks for `*.log` files in dist/
+- [x] Script checks for `.env` files in dist/
+- [x] Script checks for `*.test.ts` files in dist/
+- [x] Script reports each violation separately
+- [x] All checks must pass for validation to succeed
+
+**Progress Notes:**
+- [2026-03-02] Started implementation
+- [2026-03-02] Added FORBIDDEN_PATTERNS array (9 patterns)
+- [2026-03-02] Implemented checkForbiddenPatterns() function
+- [2026-03-02] Added recursive scanning (excludes node_modules)
+- [2026-03-02] Tested validation script
+- [2026-03-02] Committed: d568371
+
+**Implementation Details:**
+- Added patterns:
+  - .log (Log files)
+  - .env (Environment files)
+  - .test.ts, .spec.ts (TypeScript tests/specs)
+  - .test.js, .spec.js (JavaScript tests/specs)
+  - coverage/ (Coverage reports)
+  - .tmp (Temporary files)
+  - .bak (Backup files)
+- checkForbiddenPatterns() function:
+  - Uses readdirSync with withFileTypes
+  - Case-insensitive matching
+  - Recursive subdirectory scanning
+  - Skips node_modules
+- 65 lines added to script
+- Commit: d568371
+
+**Phase 3 Status:** 2/5 tasks complete (40%)
 
 **Implementation Approach:**
 
