@@ -15,10 +15,13 @@ data/test-*.db
 logs/
 *.log
 
-# Test output files (temporary)
+# Test files - ONLY README.md ALLOWED
+tests/__tests__/
+tests/*.test.ts
+tests/*.test.js
+tests/*.spec.ts
+tests/*.spec.js
 test-*.txt
-
-# Coverage reports
 coverage/
 
 # Environment variables
@@ -34,3 +37,14 @@ Thumbs.db
 
 # Junk files
 nul
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
