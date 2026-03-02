@@ -595,10 +595,39 @@ Add a `--json` flag to output validation results in JSON format for CI/CD integr
 - None
 
 **Acceptance Criteria:**
-- [ ] `--json` flag outputs results as JSON
-- [ ] JSON includes: pass/fail, timestamp, issues array
-- [ ] Exit codes remain consistent (0=pass, 1=fail)
-- [ ] Human-readable output remains default
+- [x] `--json` flag outputs results as JSON
+- [x] JSON includes: pass/fail, timestamp, issues array
+- [x] Exit codes remain consistent (0=pass, 1=fail)
+- [x] Human-readable output remains default
+
+**Progress Notes:**
+- [2026-03-02] Started implementation
+- [2026-03-02] Added --json/-j CLI argument
+- [2026-03-02] Implemented generateJsonOutput() function
+- [2026-03-02] Added checks array for CI/CD status
+- [2026-03-02] Suppressed console output in JSON mode
+- [2026-03-02] Added npm script: validate:json
+- [2026-03-02] Tested JSON output
+- [2026-03-02] Committed: 6ef844e
+
+**Implementation Details:**
+- JSON output structure:
+  - success: boolean (pass/fail)
+  - timestamp: ISO 8601 format
+  - duration: milliseconds (float)
+  - checks: array of {name, passed}
+  - issues: array of {type, message}
+- Checks tracked:
+  - npmignore-exists
+  - npmignore-entries
+  - dist-folders
+  - dist-patterns
+- Console output suppressed when jsonMode=true
+- Exit codes preserved (0=pass, 1=fail)
+- 35 lines added (55 added, 20 removed)
+- Commit: 6ef844e
+
+**Phase 3 Status:** 5/5 tasks complete (100%) ✅
 
 **Output Format:**
 ```json
