@@ -31,6 +31,7 @@ const rootDir = resolve(__dirname, '..');
 const args = process.argv.slice(2);
 const fixMode = args.includes('--fix');
 const dryRun = args.includes('--dry-run') || args.includes('-n');
+const jsonMode = args.includes('--json') || args.includes('-j');
 
 // Helper function to check if file/folder exists (async)
 async function exists(path) {
@@ -67,27 +68,27 @@ const colors = {
 };
 
 function log(message, color = colors.reset) {
-  console.log(`${color}${message}${colors.reset}`);
+  if (!jsonMode) console.log(`${color}${message}${colors.reset}`);
 }
 
 function error(message) {
-  log(`❌ ${message}`, colors.red);
+  if (!jsonMode) log(`❌ ${message}`, colors.red);
 }
 
 function success(message) {
-  log(`✅ ${message}`, colors.green);
+  if (!jsonMode) log(`✅ ${message}`, colors.green);
 }
 
 function warn(message) {
-  log(`⚠️  ${message}`, colors.yellow);
+  if (!jsonMode) log(`⚠️  ${message}`, colors.yellow);
 }
 
 function info(message) {
-  log(`ℹ️  ${message}`, colors.blue);
+  if (!jsonMode) log(`ℹ️  ${message}`, colors.blue);
 }
 
 function fix(message) {
-  log(`🔧 ${message}`, colors.yellow);
+  if (!jsonMode) log(`🔧 ${message}`, colors.yellow);
 }
 
 // Folders that should NEVER be in build output
@@ -315,12 +316,30 @@ async function checkDevFolders() {
 }
 
 /**
+ * Generate JSON output for CI/CD integration
+ */
+function generateJsonOutput(success, checks, issues, duration) {
+  return {
+    success,
+    timestamp: new Date().toISOString(),
+    duration: parseFloat(duration),
+    checks,
+    issues: issues.map(issue => ({
+      type: issue.type,
+      message: issue.message,
+    })),
+  };
+}
+
+/**
  * Main validation function - runs all checks in parallel
  */
 async function runValidation() {
   const startTime = performance.now();
 
-  if (fixMode) {
+  if (jsonMode) {
+    // JSON mode - suppress all console output except JSON
+  } else if (fixMode) {
     info(`Running in FIX mode${dryRun ? ' (DRY RUN)' : ''}...\n`);
   } else {
     info('Validating clean build configuration...\n');
@@ -337,6 +356,21 @@ async function runValidation() {
   const allIssues = [...npmIgnoreIssues, ...distIssues, ...devFolderIssues];
   const hasErrors = allIssues.some(issue => issue.type === 'error');
   const hasWarnings = allIssues.some(issue => issue.type === 'warn');
+
+  // Build checks array for JSON output
+  const checks = [
+    { name: 'npmignore-exists', passed: !npmIgnoreIssues.some(i => i.message.includes('does not exist')) },
+    { name: 'npmignore-entries', passed: !npmIgnoreIssues.some(i => i.message.includes('missing required entry')) },
+    { name: 'dist-folders', passed: !distIssues.some(i => i.message.includes('Forbidden folder found')) },
+    { name: 'dist-patterns', passed: !distIssues.some(i => i.message.includes('Forbidden file pattern found')) },
+  ];
+
+  // JSON mode - output and exit
+  if (jsonMode) {
+    const jsonOutput = generateJsonOutput(!hasErrors, checks, allIssues, (performance.now() - startTime).toFixed(2));
+    console.log(JSON.stringify(jsonOutput, null, 2));
+    process.exit(hasErrors ? 1 : 0);
+  }
 
   // Print warnings
   if (hasWarnings) {
@@ -365,12 +399,12 @@ async function runValidation() {
   // If --fix mode and there есть ошибки, попробовать исправить
   if (fixMode && hasErrors) {
     // Extract file/folder issues from dist/
-    const distFileIssues = distIssues.filter(issue => 
-      issue.type === 'error' && 
-      (issue.message.includes('Forbidden folder found') || 
+    const distFileIssues = distIssues.filter(issue =>
+      issue.type === 'error' &&
+      (issue.message.includes('Forbidden folder found') ||
        issue.message.includes('Forbidden file pattern found'))
     );
-    
+
     if (distFileIssues.length > 0) {
       // Get the actual file paths from the check
       const filesToDelete = [];
@@ -378,27 +412,27 @@ async function runValidation() {
         if (issue.message.includes('Forbidden folder found')) {
           const folderName = issue.message.match(/dist\/: (.+?)\//)[1];
           if (folderName) {
-            filesToDelete.push({ 
-              file: join(rootDir, 'dist', folderName), 
+            filesToDelete.push({
+              file: join(rootDir, 'dist', folderName),
               description: 'Forbidden folder',
-              isDirectory: true 
+              isDirectory: true
             });
           }
         } else if (issue.message.includes('Forbidden file pattern found:')) {
           const filePath = issue.message.match(/found: (.+?) \(/)[1];
           if (filePath) {
-            filesToDelete.push({ 
-              file: filePath, 
+            filesToDelete.push({
+              file: filePath,
               description: 'Forbidden file',
-              isDirectory: false 
+              isDirectory: false
             });
           }
         }
       }
-      
+
       // Apply fixes
       const fixSuccess = await applyFixes(filesToDelete);
-      
+
       if (fixSuccess && !dryRun) {
         log('\n' + '='.repeat(50));
         info('Re-running validation after cleanup...\n');

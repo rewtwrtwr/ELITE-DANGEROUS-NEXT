@@ -18,7 +18,8 @@
     "prepublishOnly": "node scripts/validate-clean-build.mjs",
     "validate:clean": "node scripts/validate-clean-build.mjs",
     "validate:fix": "node scripts/validate-clean-build.mjs --fix",
-    "validate:dry-run": "node scripts/validate-clean-build.mjs --fix --dry-run"
+    "validate:dry-run": "node scripts/validate-clean-build.mjs --fix --dry-run",
+    "validate:json": "node scripts/validate-clean-build.mjs --json"
   },
   "keywords": [
     "elite-dangerous",
