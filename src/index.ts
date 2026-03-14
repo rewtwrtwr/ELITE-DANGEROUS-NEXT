@@ -793,11 +793,23 @@ async function main(): Promise<void> {
 
   // Layout Manager routes - Initialize service and routes
   const layoutManagerService = new LayoutManagerService();
+  
+  // Initialize Python bridge
+  layoutManagerService.initialize().catch((err) => {
+    logger.error('App', 'Failed to initialize Layout Manager', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+  
   app.use("/api/v1/layout-manager", initializeLayoutManagerRoutes(layoutManagerService));
   
   // Start layout manager monitor
-  layoutManagerService.start();
-  logger.info("App", "Layout Manager started");
+  layoutManagerService.start().catch((err) => {
+    logger.error('App', 'Failed to start Layout Manager monitor', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+  logger.info("App", "Layout Manager started (Python bridge)");
 
   // API v1 routes
   app.get("/api/v1/status", (_req, res) => {
@@ -1052,8 +1064,8 @@ async function main(): Promise<void> {
   process.on("SIGTERM", () => wrappedShutdown("SIGTERM"));
 
   // Stop layout manager on shutdown
-  const stopLayoutManagers = () => {
-    layoutManagerService.stop();
+  const stopLayoutManagers = async () => {
+    await layoutManagerService.shutdown();
     logger.info("App", "Layout Manager stopped");
   };
   

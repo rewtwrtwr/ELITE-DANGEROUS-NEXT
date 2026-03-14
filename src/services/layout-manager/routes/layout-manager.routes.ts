@@ -77,32 +77,12 @@ router.post('/config', (req: Request, res: Response) => {
 
 /**
  * PUT /api/v1/layout-manager/config
- * Update existing process configuration
+ * Update existing process configuration (NOT IMPLEMENTED - use delete+add)
  * 
  * Body: { processName: string, language: 'English' | 'Russian' }
  */
 router.put('/config', (req: Request, res: Response) => {
-  if (!layoutService) {
-    return res.status(503).json({ error: 'Layout manager not initialized' });
-  }
-
-  const { processName, language } = req.body;
-
-  if (!processName || !language) {
-    return res.status(400).json({ error: 'processName and language are required' });
-  }
-
-  if (!['English', 'Russian'].includes(language)) {
-    return res.status(400).json({ error: 'Language must be English or Russian' });
-  }
-
-  const success = layoutService.updateProcess(processName, language);
-  
-  if (!success) {
-    return res.status(404).json({ error: 'Process not found' });
-  }
-
-  res.json({ success: true, message: `Updated ${processName} to ${language}` });
+  res.status(501).json({ error: 'Not implemented - delete and re-add process instead' });
 });
 
 /**
@@ -152,28 +132,10 @@ router.post('/stop', (req: Request, res: Response) => {
 
 /**
  * POST /api/v1/layout-manager/force-switch
- * Force layout switch for a process
- * 
- * Body: { processName: string }
+ * Force layout switch (NOT IMPLEMENTED - automatic only)
  */
 router.post('/force-switch', (req: Request, res: Response) => {
-  if (!layoutService) {
-    return res.status(503).json({ error: 'Layout manager not initialized' });
-  }
-
-  const { processName } = req.body;
-
-  if (!processName) {
-    return res.status(400).json({ error: 'processName is required' });
-  }
-
-  const success = layoutService.forceSwitch(processName);
-
-  if (!success) {
-    return res.status(404).json({ error: 'Process not found in config' });
-  }
-
-  res.json({ success: true, message: `Switched to ${processName} layout` });
+  res.status(501).json({ error: 'Not implemented - layout switching is automatic' });
 });
 
 export { router as layoutManagerRoutes };

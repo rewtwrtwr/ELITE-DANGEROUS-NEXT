@@ -2,106 +2,106 @@
  * Layout Manager Service
  * 
  * Main service class that manages keyboard layout switching.
+ * Uses Python subprocess for reliable Windows API calls.
  */
 
 import { EventEmitter } from 'events';
-import { 
-  getCurrentLayout, 
-  switchLayout, 
-  getActiveProcessName,
-  LAYOUT_IDS 
-} from './windows-api.js';
-import { loadConfig, saveConfig, type LayoutConfig, type ProcessConfig } from './layout-config.js';
+import { PythonBridge, type PythonBridgeResponse } from './python-bridge.js';
 import type { LayoutManagerStatus } from './types.js';
 
 export class LayoutManagerService extends EventEmitter {
-  private config: LayoutConfig = {};
-  private configFile: string;
+  private pythonBridge: PythonBridge;
+  private config: Record<string, { language: string; layoutId: number }> = {};
   private running: boolean = false;
-  private monitorInterval: NodeJS.Timeout | null = null;
-  private currentProcess: string | null = null;
-  private lastLayoutSwitch: number = 0;
-  private readonly SWITCH_COOLDOWN = 1000; // 1 second cooldown
 
-  constructor(configFile: string = 'data/layout-manager-config.ini') {
+  constructor(pythonPath: string = 'python') {
     super();
-    this.configFile = configFile;
+    this.pythonBridge = new PythonBridge(pythonPath);
   }
 
   /**
-   * Load configuration from file
+   * Initialize service - start Python bridge
    */
-  loadConfig(): void {
-    this.config = loadConfig(this.configFile);
-    this.emit('config:loaded', Object.keys(this.config).length);
+  async initialize(): Promise<void> {
+    try {
+      await this.pythonBridge.start();
+      this.emit('initialized');
+    } catch (error) {
+      this.emit('error', error);
+      throw error;
+    }
   }
 
   /**
-   * Save configuration to file
+   * Load configuration from Python
    */
-  saveConfig(): void {
-    saveConfig(this.config, this.configFile);
-    this.emit('config:saved');
+  async loadConfig(): Promise<void> {
+    try {
+      const response = await this.pythonBridge.send({ command: 'get_config' });
+      if (response.processes) {
+        this.config = {};
+        for (const proc of response.processes) {
+          this.config[proc.name] = {
+            language: proc.language,
+            layoutId: proc.layoutId,
+          };
+        }
+        this.emit('config:loaded', Object.keys(this.config).length);
+      }
+    } catch (error) {
+      this.emit('error', error);
+    }
   }
 
   /**
    * Add process to configuration
    */
-  addProcess(processName: string, language: 'English' | 'Russian'): boolean {
-    // Validate process name
-    if (!processName.toLowerCase().endsWith('.exe')) {
+  async addProcess(processName: string, language: 'English' | 'Russian'): Promise<boolean> {
+    try {
+      const response = await this.pythonBridge.send({
+        command: 'add_process',
+        name: processName,
+        language,
+      });
+      
+      if (response.success) {
+        await this.loadConfig(); // Reload config
+        this.emit('process:added', processName, language);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.emit('error', error);
       return false;
     }
-
-    // Check for duplicates
-    const normalizedName = this.normalizeProcessName(processName);
-    if (this.config[normalizedName]) {
-      return false;
-    }
-
-    // Add to config
-    this.config[normalizedName] = {
-      language,
-      layoutId: language === 'Russian' ? LAYOUT_IDS.Russian : LAYOUT_IDS.English,
-    };
-
-    this.emit('process:added', normalizedName, language);
-    return true;
   }
 
   /**
    * Remove process from configuration
    */
-  removeProcess(processName: string): boolean {
-    const normalizedName = this.normalizeProcessName(processName);
-    if (this.config[normalizedName]) {
-      delete this.config[normalizedName];
-      this.emit('process:removed', normalizedName);
-      return true;
+  async removeProcess(processName: string): Promise<boolean> {
+    try {
+      const response = await this.pythonBridge.send({
+        command: 'remove_process',
+        name: processName,
+      });
+      
+      if (response.success) {
+        await this.loadConfig(); // Reload config
+        this.emit('process:removed', processName);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.emit('error', error);
+      return false;
     }
-    return false;
-  }
-
-  /**
-   * Update process configuration
-   */
-  updateProcess(processName: string, language: 'English' | 'Russian'): boolean {
-    const normalizedName = this.normalizeProcessName(processName);
-    if (this.config[normalizedName]) {
-      this.config[normalizedName] = {
-        language,
-        layoutId: language === 'Russian' ? LAYOUT_IDS.Russian : LAYOUT_IDS.English,
-      };
-      this.emit('process:updated', normalizedName, language);
-      return true;
-    }
-    return false;
   }
 
   /**
    * Get all configured processes
    */
-  getAllProcesses(): Array<{ name: string; language: 'English' | 'Russian'; layoutId: number }> {
+  getAllProcesses(): Array<{ name: string; language: string; layoutId: number }> {
     return Object.entries(this.config).map(([name, config]) => ({
       name,
       language: config.language,
@@ -110,48 +110,31 @@ export class LayoutManagerService extends EventEmitter {
   }
 
   /**
-   * Get configuration for a specific process
+   * Start layout monitor
    */
-  getProcessConfig(processName: string): ProcessConfig | null {
-    const normalizedName = this.normalizeProcessName(processName);
-    return this.config[normalizedName] || null;
+  async start(): Promise<void> {
+    try {
+      await this.pythonBridge.send({ command: 'start_monitor' });
+      this.running = true;
+      this.emit('started');
+    } catch (error) {
+      this.emit('error', error);
+      throw error;
+    }
   }
 
   /**
-   * Start background monitor
+   * Stop layout monitor
    */
-  start(): void {
-    if (this.running) {
-      return;
+  async stop(): Promise<void> {
+    try {
+      await this.pythonBridge.send({ command: 'stop_monitor' });
+      this.running = false;
+      this.emit('stopped');
+    } catch (error) {
+      this.emit('error', error);
+      throw error;
     }
-
-    this.running = true;
-    this.loadConfig();
-    
-    // Start monitoring loop (500ms interval)
-    this.monitorInterval = setInterval(() => {
-      this.monitorLoop();
-    }, 500);
-
-    this.emit('started');
-  }
-
-  /**
-   * Stop background monitor
-   */
-  stop(): void {
-    if (!this.running) {
-      return;
-    }
-
-    if (this.monitorInterval) {
-      clearInterval(this.monitorInterval);
-      this.monitorInterval = null;
-    }
-
-    this.running = false;
-    this.currentProcess = null;
-    this.emit('stopped');
   }
 
   /**
@@ -165,73 +148,33 @@ export class LayoutManagerService extends EventEmitter {
    * Get current status
    */
   async getStatus(): Promise<LayoutManagerStatus> {
-    return {
-      running: this.running,
-      currentProcess: this.currentProcess,
-      currentLayout: await getCurrentLayout(),
-      loadedConfigs: Object.keys(this.config).length,
-    };
-  }
-
-  /**
-   * Manually switch layout for a specific process
-   */
-  forceSwitch(processName: string): boolean {
-    const config = this.getProcessConfig(processName);
-    if (!config) {
-      return false;
-    }
-
-    switchLayout(config.layoutId);
-    this.emit('layout:switched', processName, config.language);
-    return true;
-  }
-
-  /**
-   * Internal: Monitor loop
-   */
-  private async monitorLoop(): Promise<void> {
     try {
-      // Get active process name
-      const processName = await getActiveProcessName();
-      
-      if (!processName) {
-        return;
-      }
-
-      const normalizedName = this.normalizeProcessName(processName);
-
-      // Check if process is in config
-      const config = this.config[normalizedName];
-      if (!config) {
-        return;
-      }
-
-      // Check cooldown
-      const now = Date.now();
-      if (now - this.lastLayoutSwitch < this.SWITCH_COOLDOWN) {
-        return;
-      }
-
-      // Get current layout
-      const currentLayout = await getCurrentLayout();
-
-      // Switch if different
-      if (currentLayout !== config.layoutId) {
-        switchLayout(config.layoutId);
-        this.lastLayoutSwitch = now;
-        this.currentProcess = normalizedName;
-        this.emit('layout:auto-switched', normalizedName, config.language);
-      }
+      const response = await this.pythonBridge.send({ command: 'get_status' });
+      return {
+        running: response.running ?? false,
+        currentProcess: response.currentProcess ?? null,
+        currentLayout: response.currentLayout ?? 0,
+        loadedConfigs: response.loadedConfigs ?? 0,
+      };
     } catch (error) {
       this.emit('error', error);
+      return {
+        running: false,
+        currentProcess: null,
+        currentLayout: 0,
+        loadedConfigs: 0,
+      };
     }
   }
 
   /**
-   * Normalize process name (lowercase)
+   * Shutdown service
    */
-  private normalizeProcessName(name: string): string {
-    return name.toLowerCase();
+  async shutdown(): Promise<void> {
+    if (this.running) {
+      await this.stop();
+    }
+    await this.pythonBridge.stop();
+    this.emit('shutdown');
   }
 }
