@@ -1,115 +1,164 @@
-# 🚀 Elite Dangerous NEXT
+# 🎮 Elite Dangerous NEXT - Layout Manager
 
-[![Version](https://img.shields.io/badge/version-1.0.0--beta-blue.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
-[![Tests](https://img.shields.io/badge/tests-66/66%20passing-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/actions)
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
-[![Security](https://img.shields.io/badge/security-0%20vulnerabilities-brightgreen.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+**v1.0.1-beta** - Automated keyboard layout switcher for Elite Dangerous
 
-> 🎮 **Продвинутый анализатор журналов Elite Dangerous с real-time отслеживанием, статистикой и веб-интерфейсом**
-
-**🔗 Latest Version:** [v1.0.0-beta](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta)
+[![Version](https://img.shields.io/badge/version-1.0.1--beta-blue.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.1-beta)
+[![Downloads](https://img.shields.io/github/downloads/rewtwrtwr/ELITE-DANGEROUS-NEXT/v1.0.1-beta/total)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.1-beta)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.1-beta)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
 
-## ✨ Возможности
+## 🚀 Quick Start
 
-- ⚡ **Real-time Мониторинг** — Автоматическое чтение журналов и мгновенная обработка событий через WebSocket
-- 💾 **Надёжное Хранение** — Native SQLite (better-sqlite3) с WAL mode для производительности
-- 🌐 **Веб-интерфейс** — Современный HUD-дизайн в стиле Elite Dangerous
-- 📡 **REST API** — Пагинация событий, статистика, WebSocket для real-time обновлений
-- 🧪 **100% Test Coverage** — 66/66 тестов passing, < 3 секунд время прогона
+### Download & Install
+
+1. **[Download Installer](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/download/v1.0.1-beta/EliteDangerous-LayoutManager-Setup.exe)** (362 KB)
+2. Run the installer
+3. Wait for installation (2-3 minutes)
+4. Launch from desktop shortcut
+
+### First Use
+
+1. Open Layout Manager
+2. Add your processes:
+   - `EliteDangerous64.exe` → English
+   - `COVAS NEXT.exe` → Russian
+3. Click **"Start Monitor"**
+4. Enable **"Auto-start"** for automatic launch
 
 ---
 
-## ⚡ Быстрый старт
+## ✨ Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Auto-Switching** | Automatic layout change by active window | ✅ |
+| **Auto-Start** | Launch with Windows | ✅ |
+| **Hotkeys** | Ctrl+Alt+R/E for manual switch | ✅ |
+| **History** | View switch history | ✅ |
+| **Statistics** | Layout usage statistics | ✅ |
+
+---
+
+## 📋 Requirements
+
+- **OS**: Windows 10/11
+- **Python**: 3.8 or higher
+- **Node.js**: 20.x or higher
+- **Disk Space**: ~200 MB (after installation)
+
+---
+
+## 🎮 Usage
+
+### Adding Processes
+
+1. Click **"Layout"** tab
+2. Enter process name (must end with `.exe`)
+3. Select language (English/Russian)
+4. Click **"Add Process"**
+
+### Hotkeys
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+Alt+R** | Switch to Russian |
+| **Ctrl+Alt+E** | Switch to English |
+
+> ⚠️ Hotkeys only work when browser window is active
+
+### Statistics & History
+
+- Click **"📊 Statistics"** for usage stats
+- Click **"📜 View History"** for last 50 switches
+
+---
+
+## 🛠️ Installation
+
+### Step-by-Step
+
+1. **Download** the installer from [Releases](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.1-beta)
+2. **Run** `EliteDangerous-LayoutManager-Setup.exe`
+3. **Choose** installation folder (default: `C:\Program Files\ED-LayoutManager`)
+4. **Wait** for npm install + build (2-3 minutes)
+5. **Launch** from desktop shortcut
+
+### Manual Installation (Advanced)
 
 ```bash
-# Клонировать репозиторий
+# Clone repository
 git clone https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT.git
-cd ELITE-DANGEROUS-NEXT
+cd builds/ELITE-DANGEROUS-NEXT
 
-# Установить зависимости
+# Install dependencies
 npm install
 
-# Запустить приложение
-npm run dev
+# Build project
+npm run build
+
+# Start server
+node dist/index.js
 ```
 
-Приложение запустится на **http://localhost:3000**
+---
+
+## 🔧 Troubleshooting
+
+### Server Won't Start
+
+```powershell
+cd "C:\Program Files\ED-LayoutManager"
+npm install
+npm run build
+node dist/index.js
+```
+
+### Python Not Found
+
+Install Python 3.8+ from https://www.python.org/downloads/
+
+### Layout Doesn't Switch
+
+1. Check process name matches exactly
+2. Ensure Python is installed
+3. Restart monitor
 
 ---
 
-## 🛠️ Технологии
+## 📊 What's New in v1.0.1-beta
 
-| Компонент | Технологии |
-|-----------|------------|
-| **Backend** | Node.js, Express, Socket.IO, TypeScript |
-| **Frontend** | Preact, Vite, TypeScript |
-| **Database** | SQLite (better-sqlite3) |
-| **Testing** | Jest (66/66 tests passing) |
+### New Features
 
----
+- ✅ Statistics dashboard
+- ✅ Switch history viewer
+- ✅ Auto-start option
+- ✅ Global hotkeys (browser only)
 
-## 📊 Статус
+### Bug Fixes
 
-| Компонент | Статус |
-|-----------|--------|
-| **Database** | ✅ Native SQLite (better-sqlite3) |
-| **Journal Parser** | ✅ Real-time мониторинг |
-| **API** | ✅ REST + WebSocket |
-| **Web UI** | ✅ Responsive дизайн |
-| **Tests** | ✅ 100% coverage (66/66) |
-| **Security** | ✅ 0 production vulnerabilities |
+- Fixed missing `public/index.html` in installer
+- Fixed layout switching for some applications
+- Fixed crash on duplicate process names
 
 ---
 
-## 📚 Документация
+## 🔗 Links
 
-Полная документация доступна в ветке [v1.0.0-beta](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta):
-
-- 📖 [API Documentation](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/API.md)
-- 📦 [Installation Guide](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/INSTALLATION.md)
-- 🧪 [Testing Guide](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/TESTING-ISOLATION.md)
-- 📝 [Changelog](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs/CHANGELOG.md)
-
----
-
-## 🚀 Releases
-
-| Version | Status | Download |
-|---------|--------|----------|
-| [v1.0.0-beta](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.0-beta) | ✅ Latest | [ZIP](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/archive/refs/tags/v1.0.0-beta.zip) |
-| [v1.0.0-alpha](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.0-alpha) | ⚠️ Deprecated | [ZIP](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/archive/refs/tags/v1.0.0-alpha.zip) |
-
----
-
-## 🤝 Contributing
-
-1. **Fork:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/fork
-2. **Create branch:** `git checkout -b feature/your-feature`
-3. **Commit:** `git commit -m 'Add feature'`
-4. **Push:** `git push origin feature/your-feature`
-5. **Pull Request:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/pulls
-
-Подробнее в [CONTRIBUTING.md](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/CONTRIBUTING.md)
-
----
-
-## 📞 Support
-
-- **🐛 Issues:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/issues
-- **💬 Discussions:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/discussions
-- **📚 Documentation:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/tree/v1.0.0-beta/docs
-- **🔗 Releases:** https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases
+- **[Download Latest Release](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/releases/tag/v1.0.1-beta)**
+- **[Report Issue](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/issues)**
+- **[Discussions](https://github.com/rewtwrtwr/ELITE-DANGEROUS-NEXT/discussions)**
 
 ---
 
 ## 📄 License
 
-MIT License
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Made with ❤️ for Elite Dangerous Commanders**
-
-⭐ **Star this project if you find it useful!**
+**Version**: 1.0.1-beta  
+**Build Date**: March 14, 2026  
+**Installer Size**: 362 KB  
+**Installed Size**: ~200 MB
