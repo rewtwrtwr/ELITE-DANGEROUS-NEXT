@@ -32,6 +32,8 @@ export const LayoutConfigPanel: FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [autoStart, setAutoStart] = useState(false);
+  const [history, setHistory] = useState<Array<{ timestamp: string; process: string; from: string; to: string }>>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Load autoStart setting on mount
   useEffect(() => {
@@ -62,6 +64,29 @@ export const LayoutConfigPanel: FC = () => {
       console.error('Failed to toggle autoStart:', err);
     }
   }, [autoStart]);
+
+  /**
+   * Load history
+   */
+  const loadHistory = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/layout-manager/history?limit=50');
+      const data = await response.json();
+      if (data.success) {
+        setHistory(data.history || []);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+  }, []);
+
+  /**
+   * Format timestamp
+   */
+  const formatTimestamp = useCallback((timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString() + ' ' + date.toLocaleDateString();
+  }, []);
 
   /**
    * Validate process name
@@ -260,7 +285,19 @@ export const LayoutConfigPanel: FC = () => {
 
       {/* Process List */}
       <div className="layout-process-list">
-        <h3 className="list-title">Configured Processes</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h3 className="list-title" style={{ margin: 0 }}>Configured Processes</h3>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              loadHistory();
+              setShowHistory(true);
+            }}
+            style={{ padding: '8px 16px', fontSize: '12px' }}
+          >
+            📜 View History
+          </button>
+        </div>
         {processes.length === 0 ? (
           <div className="empty-state">
             No processes configured. Add your first process above.
@@ -293,6 +330,73 @@ export const LayoutConfigPanel: FC = () => {
           </table>
         )}
       </div>
+
+      {/* History Modal */}
+      {showHistory && (
+        <div className="layout-modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="layout-modal" style={{
+            backgroundColor: '#1a1a2e',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            width: '90%'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, color: '#00a8ff' }}>Switch History</h3>
+              <button
+                className="btn btn-small btn-danger"
+                onClick={() => setShowHistory(false)}
+                style={{ padding: '6px 12px' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+            {history.length === 0 ? (
+              <div className="empty-state" style={{ padding: '40px', textAlign: 'center' }}>
+                No switch history yet. Switches will be logged here when monitor is running.
+              </div>
+            ) : (
+              <table className="process-table">
+                <thead>
+                  <tr>
+                    <th className="table-header">Time</th>
+                    <th className="table-header">Process</th>
+                    <th className="table-header">Switch</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((entry, index) => (
+                    <tr key={index} className="table-row">
+                      <td className="table-cell" style={{ fontSize: '12px' }}>
+                        {formatTimestamp(entry.timestamp)}
+                      </td>
+                      <td className="table-cell">{entry.process}</td>
+                      <td className="table-cell">
+                        <span style={{ color: '#ff4444' }}>{entry.from}</span>
+                        <span style={{ margin: '0 8px' }}>→</span>
+                        <span style={{ color: '#00ff88' }}>{entry.to}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Help Text */}
       <div className="layout-help">
