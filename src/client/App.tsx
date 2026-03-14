@@ -13,13 +13,14 @@ import { useEventsSimple } from "./hooks/useEventsSimple";
 import VirtualEventsList from "./components/VirtualEventsList";
 import { FilterBar } from "./components/FilterBar";
 import type { EDEvent, EventStats } from "./types/events";
+import { LayoutConfigPanel } from "./components/layout-manager/LayoutConfigPanel.js";
 import "./styles/hud.css";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ViewType = "events" | "profile" | "settings";
+type ViewType = "events" | "profile" | "settings" | "layout";
 
 interface CAPIProfile {
   commander: { name: string; frontierId: string };
@@ -55,6 +56,15 @@ const Icons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  ),
+  layout: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="2" y="2" width="20" height="20" rx="2" />
+      <path d="M2 12h20" />
+      <path d="M12 2v20" />
+      <circle cx="8" cy="8" r="2" />
+      <circle cx="16" cy="16" r="2" />
     </svg>
   ),
 };
@@ -162,6 +172,12 @@ function Sidebar({ currentView, onViewChange }: { currentView: ViewType; onViewC
         label="Profile"
         active={currentView === "profile"}
         onClick={() => onViewChange("profile")}
+      />
+      <SidebarButton
+        icon={Icons.layout}
+        label="Layout"
+        active={currentView === "layout"}
+        onClick={() => onViewChange("layout")}
       />
       <SidebarButton
         icon={Icons.settings}
@@ -484,6 +500,13 @@ export function App() {
           {/* Settings View */}
           {currentView === 'settings' && (
             <SettingsPanelView />
+          )}
+
+          {/* Layout Manager View */}
+          {currentView === 'layout' && (
+            <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
+              <LayoutConfigPanel />
+            </div>
           )}
         </div>
       </main>
