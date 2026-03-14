@@ -794,7 +794,7 @@ async function main(): Promise<void> {
   // Layout Manager routes - Initialize service and routes
   const layoutManagerService = new LayoutManagerService();
   
-  // Initialize Python bridge
+  // Initialize Python bridge (don't start monitor yet - user clicks Start button)
   layoutManagerService.initialize().catch((err) => {
     logger.error('App', 'Failed to initialize Layout Manager', {
       error: err instanceof Error ? err.message : String(err),
@@ -803,13 +803,8 @@ async function main(): Promise<void> {
   
   app.use("/api/v1/layout-manager", initializeLayoutManagerRoutes(layoutManagerService));
   
-  // Start layout manager monitor
-  layoutManagerService.start().catch((err) => {
-    logger.error('App', 'Failed to start Layout Manager monitor', {
-      error: err instanceof Error ? err.message : String(err),
-    });
-  });
-  logger.info("App", "Layout Manager started (Python bridge)");
+  // Don't auto-start monitor - user controls it via UI
+  logger.info("App", "Layout Manager initialized (Python bridge ready)");
 
   // API v1 routes
   app.get("/api/v1/status", (_req, res) => {

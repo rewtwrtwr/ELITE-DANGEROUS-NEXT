@@ -66,7 +66,12 @@ export const LayoutConfigPanel: FC = () => {
       setSuccessMessage(`Added ${processName} with ${language} layout`);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to add process');
+      const message = err instanceof Error ? err.message : 'Failed to add process';
+      if (message.includes('already exists')) {
+        setFormError('Process already exists - delete it first or choose different name');
+      } else {
+        setFormError(message);
+      }
     }
   }, [processName, language, addProcess, validateProcessName]);
 

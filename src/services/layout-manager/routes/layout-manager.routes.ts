@@ -51,7 +51,7 @@ router.get('/config', (req: Request, res: Response) => {
  * 
  * Body: { processName: string, language: 'English' | 'Russian' }
  */
-router.post('/config', (req: Request, res: Response) => {
+router.post('/config', async (req: Request, res: Response) => {
   if (!layoutService) {
     return res.status(503).json({ error: 'Layout manager not initialized' });
   }
@@ -66,13 +66,21 @@ router.post('/config', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Language must be English or Russian' });
   }
 
-  const success = layoutService.addProcess(processName, language);
-  
-  if (!success) {
-    return res.status(400).json({ error: 'Failed to add process (invalid name or duplicate)' });
-  }
+  try {
+    const success = await layoutService.addProcess(processName, language);
+    
+    if (!success) {
+      return res.status(400).json({ error: 'Failed to add process (invalid name or duplicate)' });
+    }
 
-  res.json({ success: true, message: `Added ${processName} with ${language} layout` });
+    res.json({ success: true, message: `Added ${processName} with ${language} layout` });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('already exists')) {
+      return res.status(409).json({ error: 'Process already exists' });
+    }
+    return res.status(500).json({ error: errorMessage });
+  }
 });
 
 /**
