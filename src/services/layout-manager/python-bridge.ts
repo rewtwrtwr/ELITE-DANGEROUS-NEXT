@@ -62,7 +62,8 @@ export class PythonBridge extends EventEmitter {
    */
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const cliPath = path.join(__dirname, '..', '..', 'layout-manager', 'cli.py');
+      // Path is relative to project root (builds/ELITE-DANGEROUS-NEXT/)
+      const cliPath = path.join(__dirname, '..', '..', '..', 'layout-manager', 'cli.py');
       
       this.pythonProcess = spawn(this.pythonPath, [cliPath, '--stdin'], {
         stdio: ['pipe', 'pipe', 'pipe'],
