@@ -336,6 +336,10 @@ def process_command(line):
         elif command == "get_history":
             limit = cmd.get("limit", 100)
             response = {"success": True, "history": get_history(limit)}
+        elif command == "switch_to_russian":
+            response = switch_to_language("Russian")
+        elif command == "switch_to_english":
+            response = switch_to_language("English")
         else:
             response = {"success": False, "error": f"Unknown command: {command}"}
         
@@ -344,6 +348,28 @@ def process_command(line):
         send_response("unknown", {"success": False, "error": f"Invalid JSON: {e}"})
     except Exception as e:
         send_response(command, {"success": False, "error": str(e)})
+
+def switch_to_language(language):
+    """Switch to specified language immediately."""
+    try:
+        layout_id = LAYOUT_IDS.get(language, 0x4090409)
+        current_layout = get_current_layout()
+        
+        if current_layout == layout_id:
+            return {"success": True, "message": f"Already {language}", "switched": False}
+        
+        # Get current language name
+        from_lang = 'Russian' if current_layout == LAYOUT_IDS['Russian'] else 'English'
+        
+        # Switch layout
+        switch_layout(layout_id)
+        
+        # Log the switch
+        log_switch("manual_hotkey", from_lang, language)
+        
+        return {"success": True, "message": f"Switched to {language}", "switched": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 # ============================================================================
 # Main Entry Point

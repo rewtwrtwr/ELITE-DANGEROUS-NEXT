@@ -89,6 +89,57 @@ export const LayoutConfigPanel: FC = () => {
   }, []);
 
   /**
+   * Switch to Russian layout
+   */
+  const switchToRussian = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/layout-manager/switch/russian', { method: 'POST' });
+      const data = await response.json();
+      if (data.success && data.switched) {
+        setSuccessMessage('Switched to Russian');
+        setTimeout(() => setSuccessMessage(null), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to switch to Russian:', err);
+    }
+  }, []);
+
+  /**
+   * Switch to English layout
+   */
+  const switchToEnglish = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/layout-manager/switch/english', { method: 'POST' });
+      const data = await response.json();
+      if (data.success && data.switched) {
+        setSuccessMessage('Switched to English');
+        setTimeout(() => setSuccessMessage(null), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to switch to English:', err);
+    }
+  }, []);
+
+  // Global hotkey listener
+  useEffect(() => {
+    const handleGlobalHotkey = (event: KeyboardEvent) => {
+      // Ctrl+Alt+R → Russian
+      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        switchToRussian();
+      }
+      // Ctrl+Alt+E → English
+      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault();
+        switchToEnglish();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalHotkey);
+    return () => window.removeEventListener('keydown', handleGlobalHotkey);
+  }, [switchToRussian, switchToEnglish]);
+
+  /**
    * Validate process name
    */
   const validateProcessName = useCallback((name: string): boolean => {
@@ -406,6 +457,11 @@ export const LayoutConfigPanel: FC = () => {
           <li>Select the language for each process</li>
           <li>Click &quot;Start Monitor&quot; to enable automatic switching</li>
           <li>When you switch to a configured process, the layout will automatically change</li>
+        </ul>
+        <h4>⌨️ Hotkeys:</h4>
+        <ul>
+          <li><kbd style={{ backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px', color: '#00ff88' }}>Ctrl+Alt+R</kbd> → Switch to Russian</li>
+          <li><kbd style={{ backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px', color: '#00ff88' }}>Ctrl+Alt+E</kbd> → Switch to English</li>
         </ul>
       </div>
     </div>

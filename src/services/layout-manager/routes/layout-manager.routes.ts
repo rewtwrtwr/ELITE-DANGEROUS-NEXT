@@ -198,4 +198,38 @@ router.get('/history', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/v1/layout-manager/switch/russian
+ * Switch to Russian layout
+ */
+router.post('/switch/russian', async (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+  
+  try {
+    const response = await (layoutService as any).pythonBridge.send({ command: 'switch_to_russian' });
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to switch layout', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
+ * POST /api/v1/layout-manager/switch/english
+ * Switch to English layout
+ */
+router.post('/switch/english', async (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+  
+  try {
+    const response = await (layoutService as any).pythonBridge.send({ command: 'switch_to_english' });
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to switch layout', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 export { router as layoutManagerRoutes };
