@@ -15,6 +15,7 @@ export interface PythonBridgeCommand {
   command: string;
   name?: string;
   language?: 'English' | 'Russian';
+  limit?: number;
 }
 
 export interface PythonBridgeResponse {
@@ -26,6 +27,7 @@ export interface PythonBridgeResponse {
   currentProcess?: string | null;
   currentLayout?: number;
   loadedConfigs?: number;
+  history?: Array<{ timestamp: string; process: string; from: string; to: string }>;
 }
 
 export interface PythonBridgeStatus {

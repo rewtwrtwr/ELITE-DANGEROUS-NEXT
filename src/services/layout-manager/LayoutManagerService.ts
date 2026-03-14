@@ -177,4 +177,17 @@ export class LayoutManagerService extends EventEmitter {
     await this.pythonBridge.stop();
     this.emit('shutdown');
   }
+
+  /**
+   * Get switch history
+   */
+  async getHistory(limit: number = 100): Promise<Array<{ timestamp: string; process: string; from: string; to: string }>> {
+    try {
+      const response = await this.pythonBridge.send({ command: 'get_history', limit });
+      return response.history || [];
+    } catch (error) {
+      this.emit('error', error);
+      return [];
+    }
+  }
 }

@@ -23,6 +23,7 @@ from pathlib import Path
 
 # Constants
 CONFIG_FILE = Path(__file__).parent / 'config.ini'
+SWITCH_LOG_FILE = Path(__file__).parent / 'switches.log'
 LAYOUT_IDS = {
     "English": 0x4090409,
     "Russian": 0x4190419
@@ -32,6 +33,67 @@ LAYOUT_IDS = {
 monitor_running = False
 monitor_thread = None
 current_process = None
+
+# ============================================================================
+# History Logging
+# ============================================================================
+
+def log_switch(process_name, from_lang, to_lang):
+    """Log a layout switch to switches.log file."""
+    try:
+        from datetime import datetime
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'process': process_name,
+            'from': from_lang,
+            'to': to_lang
+        }
+        with open(SWITCH_LOG_FILE, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(log_entry) + '\n')
+        
+        # Rotate log if too large (keep last 1000 entries)
+        rotate_log()
+    except Exception as e:
+        print(f"Failed to log switch: {e}", file=sys.stderr)
+
+def rotate_log(max_lines=1000):
+    """Rotate log file if it exceeds max_lines."""
+    try:
+        if not SWITCH_LOG_FILE.exists():
+            return
+        
+        with open(SWITCH_LOG_FILE, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        if len(lines) > max_lines:
+            # Keep only last max_lines
+            with open(SWITCH_LOG_FILE, 'w', encoding='utf-8') as f:
+                f.writelines(lines[-max_lines:])
+    except Exception as e:
+        print(f"Failed to rotate log: {e}", file=sys.stderr)
+
+def get_history(limit=100):
+    """Get recent switch history."""
+    try:
+        if not SWITCH_LOG_FILE.exists():
+            return []
+        
+        with open(SWITCH_LOG_FILE, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        # Get last N entries
+        recent = lines[-limit:]
+        history = []
+        for line in recent:
+            try:
+                history.append(json.loads(line.strip()))
+            except:
+                continue
+        
+        return history
+    except Exception as e:
+        print(f"Failed to get history: {e}", file=sys.stderr)
+        return []
 
 # ============================================================================
 # Config Functions
@@ -180,7 +242,15 @@ def monitor_loop():
                     target_layout = int(layout_id_str, 16) if layout_id_str.startswith('0x') else int(layout_id_str)
                     
                     if current_layout != target_layout:
+                        # Get language names for logging
+                        from_lang = 'Russian' if current_layout == LAYOUT_IDS['Russian'] else 'English'
+                        to_lang = 'Russian' if target_layout == LAYOUT_IDS['Russian'] else 'English'
+                        
                         print(f"DEBUG: SWITCHING! {process_name} layout {current_layout} -> {target_layout}", file=sys.stderr, flush=True)
+                        
+                        # Log the switch
+                        log_switch(process_name, from_lang, to_lang)
+                        
                         switch_layout(target_layout)
                         current_process = process_name
                         # Send status update
@@ -263,6 +333,9 @@ def process_command(line):
             response = stop_monitor()
         elif command == "get_status":
             response = get_status()
+        elif command == "get_history":
+            limit = cmd.get("limit", 100)
+            response = {"success": True, "history": get_history(limit)}
         else:
             response = {"success": False, "error": f"Unknown command: {command}"}
         

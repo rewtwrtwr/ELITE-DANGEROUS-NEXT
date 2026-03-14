@@ -1,0 +1,8 @@
+{
+  "autoStart": true,
+  "lastProfile": "default",
+  "hotkeys": {
+    "switchToRussian": "Ctrl+Alt+R",
+    "switchToEnglish": "Ctrl+Alt+E"
+  }
+}

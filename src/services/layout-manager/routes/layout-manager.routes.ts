@@ -179,4 +179,23 @@ router.post('/settings/auto-start', async (req: Request, res: Response) => {
   res.json({ success: true, enabled });
 });
 
+/**
+ * GET /api/v1/layout-manager/history
+ * Get switch history
+ */
+router.get('/history', async (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+  
+  const limit = parseInt(req.query.limit as string) || 100;
+  
+  try {
+    const history = await layoutService.getHistory(limit);
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get history', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 export { router as layoutManagerRoutes };
