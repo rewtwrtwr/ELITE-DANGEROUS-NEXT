@@ -43,11 +43,14 @@ export function useLayoutManager(): UseLayoutManagerResult {
    * Refresh processes list
    */
   const refreshProcesses = useCallback(async () => {
+    console.log('[useLayoutManager] Refreshing processes...');
     try {
       const data = await layoutManagerApi.getAllLayoutConfigs();
+      console.log('[useLayoutManager] Processes loaded:', data);
       setProcesses(data);
       setError(null);
     } catch (err) {
+      console.error('[useLayoutManager] Error loading processes:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch processes');
     }
   }, []);

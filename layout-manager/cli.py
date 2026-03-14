@@ -114,45 +114,77 @@ def get_window_process_name(hwnd):
 def get_current_layout():
     """Get current keyboard layout."""
     import ctypes
+    import sys
+    # Get keyboard layout for the foreground window's thread
     hwnd = get_foreground_window()
-    hkl = ctypes.windll.user32.GetKeyboardLayout(hwnd)
-    return hkl & 0xFFFFFFFF
+    thread_id = ctypes.windll.user32.GetWindowThreadProcessId(hwnd, None)
+    hkl = ctypes.windll.user32.GetKeyboardLayout(thread_id)
+    layout = hkl & 0xFFFFFFFF
+    
+    # Debug: print to stderr so it doesn't break JSON
+    print(f"DEBUG: hwnd={hwnd}, thread={thread_id}, hkl={hkl}, layout={layout}", file=sys.stderr, flush=True)
+    
+    return layout
 
 def switch_layout(layout_id):
     """Switch keyboard layout."""
     import ctypes
-    import time
+    import sys
     
     WM_INPUTLANGCHANGEREQUEST = 0x0050
     HWND_BROADCAST = 0xFFFF
     
     hwnd = get_foreground_window()
-    ctypes.windll.user32.PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, layout_id)
-    time.sleep(0.05)
-    ctypes.windll.user32.PostMessageW(HWND_BROADCAST, WM_INPUTLANGCHANGEREQUEST, 0, layout_id)
+    
+    # Debug log
+    print(f"DEBUG SWITCH: hwnd={hwnd}, layout_id={layout_id} (0x{layout_id:X})", file=sys.stderr, flush=True)
+    
+    # Send to active window
+    result1 = ctypes.windll.user32.PostMessageW(hwnd, WM_INPUTLANGCHANGEREQUEST, 0, layout_id)
+    
+    # Small delay
+    ctypes.windll.kernel32.Sleep(50)
+    
+    # Broadcast system-wide
+    result2 = ctypes.windll.user32.PostMessageW(HWND_BROADCAST, WM_INPUTLANGCHANGEREQUEST, 0, layout_id)
+    
+    # Debug result
+    print(f"DEBUG SWITCH: result1={result1}, result2={result2}", file=sys.stderr, flush=True)
 
 def monitor_loop():
     """Main monitor loop."""
     global monitor_running, current_process
     
+    import sys
+    
+    iteration = 0
     while monitor_running:
+        iteration += 1
         try:
             hwnd = get_foreground_window()
             process_name = get_window_process_name(hwnd).lower()
+            current_layout = get_current_layout()
+            
+            # Debug logging every 5 iterations
+            if iteration % 5 == 0:
+                send_status("debug", f"Iteration {iteration}: hwnd={hwnd}, process={process_name}, layout={current_layout}")
             
             if process_name:
                 config = load_config()
-                if process_name in config:
-                    layout_id_str = config.get(process_name, 'LayoutID', fallback='0x4090409')
+                # Compare lowercase
+                if process_name.lower() in [k.lower() for k in config.keys()]:
+                    # Find matching key
+                    matching_key = next(k for k in config.keys() if k.lower() == process_name.lower())
+                    layout_id_str = config.get(matching_key, 'LayoutID', fallback='0x4090409')
                     # Parse hex string (0x4190419) or decimal
                     target_layout = int(layout_id_str, 16) if layout_id_str.startswith('0x') else int(layout_id_str)
                     
-                    current_layout = get_current_layout()
                     if current_layout != target_layout:
+                        print(f"DEBUG: SWITCHING! {process_name} layout {current_layout} -> {target_layout}", file=sys.stderr, flush=True)
                         switch_layout(target_layout)
                         current_process = process_name
                         # Send status update
-                        send_status("layout_switched", process_name, config.get(process_name, 'Language', fallback='Unknown'))
+                        send_status("layout_switched", process_name, config.get(matching_key, 'Language', fallback='Unknown'))
         except Exception as e:
             send_status("error", str(e))
         

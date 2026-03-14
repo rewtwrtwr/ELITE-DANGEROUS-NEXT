@@ -794,8 +794,10 @@ async function main(): Promise<void> {
   // Layout Manager routes - Initialize service and routes
   const layoutManagerService = new LayoutManagerService();
   
-  // Initialize Python bridge (don't start monitor yet - user clicks Start button)
-  layoutManagerService.initialize().catch((err) => {
+  // Initialize Python bridge and load config
+  layoutManagerService.initialize().then(() => {
+    layoutManagerService.loadConfig();
+  }).catch((err) => {
     logger.error('App', 'Failed to initialize Layout Manager', {
       error: err instanceof Error ? err.message : String(err),
     });

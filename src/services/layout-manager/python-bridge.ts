@@ -131,7 +131,26 @@ export class PythonBridge extends EventEmitter {
       }
 
       this.pendingCommand = { command, resolve, reject };
-      this.pythonProcess.stdin?.write(JSON.stringify(command) + '\n');
+      
+      const jsonData = JSON.stringify(command) + '\n';
+      console.log('[Python Bridge] Sending:', jsonData);
+      
+      this.pythonProcess.stdin?.write(jsonData, (err) => {
+        if (err) {
+          console.error('[Python Bridge] Write error:', err);
+          reject(err);
+        }
+      });
+      
+      // Timeout after 5 seconds
+      const pendingCmd = this.pendingCommand;
+      setTimeout(() => {
+        if (this.pendingCommand === pendingCmd) {
+          console.error('[Python Bridge] Command timeout:', command.command);
+          this.pendingCommand = null;
+          reject(new Error(`Command timeout: ${command.command}`));
+        }
+      }, 5000);
     });
   }
 
@@ -140,6 +159,7 @@ export class PythonBridge extends EventEmitter {
    */
   private handleOutput(output: string): void {
     this.buffer += output;
+    console.log('[Python Bridge] Raw output:', output);
     
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() || ''; // Keep incomplete line in buffer
@@ -147,25 +167,35 @@ export class PythonBridge extends EventEmitter {
     for (const line of lines) {
       if (!line.trim()) continue;
 
+      console.log('[Python Bridge] Processing line:', line);
+      
       try {
         const data = JSON.parse(line);
+        console.log('[Python Bridge] Parsed JSON:', data);
         
         if (data.type === 'status' && data.event === 'ready') {
+          console.log('[Python Bridge] Python ready!');
           this.ready = true;
           this.emit('ready');
         } else if (data.type === 'status') {
+          console.log('[Python Bridge] Status event:', data.event);
           this.emit('status', data);
         } else if (data.command) {
           // This is a command response
+          console.log('[Python Bridge] Command response:', data.command, data.success);
           if (this.pendingCommand) {
             const { resolve, reject } = this.pendingCommand;
             this.pendingCommand = null;
             
             if (data.success) {
+              console.log('[Python Bridge] Resolving with success');
               resolve(data);
             } else {
+              console.log('[Python Bridge] Rejecting with error:', data.error);
               reject(new Error(data.error || 'Command failed'));
             }
+          } else {
+            console.warn('[Python Bridge] No pending command for response');
           }
         }
       } catch (error) {

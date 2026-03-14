@@ -28,14 +28,18 @@ const BASE_URL = '/api/v1/layout-manager';
  * Get all configured processes
  */
 export async function getAllLayoutConfigs(): Promise<LayoutProcess[]> {
+  console.log('[Layout API] Fetching all configs...');
   const response = await fetch(`${BASE_URL}/config`);
-  
+  console.log('[Layout API] Response status:', response.status);
+
   if (!response.ok) {
     const error: ApiError = await response.json();
+    console.error('[Layout API] Error:', error);
     throw new Error(error.message || 'Failed to fetch layout configs');
   }
-  
+
   const data = await response.json();
+  console.log('[Layout API] Received configs:', data);
   return data.processes || [];
 }
 
