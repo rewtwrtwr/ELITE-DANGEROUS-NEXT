@@ -34,6 +34,7 @@ export const LayoutConfigPanel: FC = () => {
   const [autoStart, setAutoStart] = useState(false);
   const [history, setHistory] = useState<Array<{ timestamp: string; process: string; from: string; to: string }>>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [lastHotkey, setLastHotkey] = useState<string | null>(null);
 
   // Load autoStart setting on mount
   useEffect(() => {
@@ -126,12 +127,16 @@ export const LayoutConfigPanel: FC = () => {
       // Ctrl+Alt+R → Russian
       if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'r') {
         event.preventDefault();
+        setLastHotkey('🇷🇺 Russian');
         switchToRussian();
+        setTimeout(() => setLastHotkey(null), 1500);
       }
       // Ctrl+Alt+E → English
       if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'e') {
         event.preventDefault();
+        setLastHotkey('🇬🇧 English');
         switchToEnglish();
+        setTimeout(() => setLastHotkey(null), 1500);
       }
     };
 
@@ -463,6 +468,23 @@ export const LayoutConfigPanel: FC = () => {
           <li><kbd style={{ backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px', color: '#00ff88' }}>Ctrl+Alt+R</kbd> → Switch to Russian</li>
           <li><kbd style={{ backgroundColor: '#333', padding: '2px 6px', borderRadius: '4px', color: '#00ff88' }}>Ctrl+Alt+E</kbd> → Switch to English</li>
         </ul>
+        {lastHotkey && (
+          <div style={{ 
+            marginTop: '10px', 
+            padding: '10px', 
+            backgroundColor: 'rgba(0, 255, 136, 0.1)', 
+            border: '1px solid #00ff88',
+            borderRadius: '4px',
+            textAlign: 'center',
+            color: '#00ff88',
+            fontWeight: 'bold'
+          }}>
+            Last hotkey: {lastHotkey} ✅
+          </div>
+        )}
+        <div style={{ marginTop: '10px', padding: '10px', backgroundColor: 'rgba(255, 165, 0, 0.1)', border: '1px solid orange', borderRadius: '4px', fontSize: '12px' }}>
+          <strong>⚠️ Note:</strong> Hotkeys only work when this browser tab is active. For global hotkeys in games, use AutoHotKey or similar software.
+        </div>
       </div>
     </div>
   );
