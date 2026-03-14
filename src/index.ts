@@ -38,6 +38,10 @@ import { getConfig, logConfig } from "./utils/config.js";
 // Auth routes import
 import { authRoutes } from "./routes/auth.js";
 
+// Layout Manager import
+import { LayoutManagerService } from "./services/layout-manager/LayoutManagerService.js";
+import { initializeLayoutManagerRoutes } from "./services/layout-manager/routes/layout-manager.routes.js";
+
 // Not Found Handler import
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 
@@ -787,6 +791,14 @@ async function main(): Promise<void> {
   // Auth routes - BEFORE static, handles /auth/status
   app.use("/auth", authRoutes);
 
+  // Layout Manager routes - Initialize service and routes
+  const layoutManagerService = new LayoutManagerService();
+  app.use("/api/v1/layout-manager", initializeLayoutManagerRoutes(layoutManagerService));
+  
+  // Start layout manager monitor
+  layoutManagerService.start();
+  logger.info("App", "Layout Manager started");
+
   // API v1 routes
   app.get("/api/v1/status", (_req, res) => {
     res.json({
@@ -1038,6 +1050,15 @@ async function main(): Promise<void> {
   // Register shutdown handlers
   process.on("SIGINT", () => wrappedShutdown("SIGINT"));
   process.on("SIGTERM", () => wrappedShutdown("SIGTERM"));
+
+  // Stop layout manager on shutdown
+  const stopLayoutManagers = () => {
+    layoutManagerService.stop();
+    logger.info("App", "Layout Manager stopped");
+  };
+  
+  process.on("SIGINT", stopLayoutManagers);
+  process.on("SIGTERM", stopLayoutManagers);
 
   // Start HTTP server
   server.listen(port, "0.0.0.0", () => {

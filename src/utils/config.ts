@@ -92,6 +92,7 @@ export function validateProductionConfig(): void {
 
   // Validate journal path exists in production
   if (config.isProduction) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require('fs');
     if (!fs.existsSync(config.journalPath)) {
       console.warn(

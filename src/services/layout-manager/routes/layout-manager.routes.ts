@@ -1,0 +1,179 @@
+/**
+ * Layout Manager API Routes
+ * 
+ * REST API endpoints for layout manager configuration.
+ */
+
+import { Router, Request, Response } from 'express';
+import { LayoutManagerService } from '../LayoutManagerService.js';
+
+let layoutService: LayoutManagerService | null = null;
+
+/**
+ * Initialize layout manager routes with service instance
+ */
+export function initializeLayoutManagerRoutes(service: LayoutManagerService): Router {
+  layoutService = service;
+  return router;
+}
+
+const router = Router();
+
+/**
+ * GET /api/v1/layout-manager/status
+ * Get current layout manager status
+ */
+router.get('/status', async (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  const status = await layoutService.getStatus();
+  res.json(status);
+});
+
+/**
+ * GET /api/v1/layout-manager/config
+ * Get all configured processes
+ */
+router.get('/config', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  const processes = layoutService.getAllProcesses();
+  res.json({ processes });
+});
+
+/**
+ * POST /api/v1/layout-manager/config
+ * Add new process to configuration
+ * 
+ * Body: { processName: string, language: 'English' | 'Russian' }
+ */
+router.post('/config', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  const { processName, language } = req.body;
+
+  if (!processName || !language) {
+    return res.status(400).json({ error: 'processName and language are required' });
+  }
+
+  if (!['English', 'Russian'].includes(language)) {
+    return res.status(400).json({ error: 'Language must be English or Russian' });
+  }
+
+  const success = layoutService.addProcess(processName, language);
+  
+  if (!success) {
+    return res.status(400).json({ error: 'Failed to add process (invalid name or duplicate)' });
+  }
+
+  res.json({ success: true, message: `Added ${processName} with ${language} layout` });
+});
+
+/**
+ * PUT /api/v1/layout-manager/config
+ * Update existing process configuration
+ * 
+ * Body: { processName: string, language: 'English' | 'Russian' }
+ */
+router.put('/config', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  const { processName, language } = req.body;
+
+  if (!processName || !language) {
+    return res.status(400).json({ error: 'processName and language are required' });
+  }
+
+  if (!['English', 'Russian'].includes(language)) {
+    return res.status(400).json({ error: 'Language must be English or Russian' });
+  }
+
+  const success = layoutService.updateProcess(processName, language);
+  
+  if (!success) {
+    return res.status(404).json({ error: 'Process not found' });
+  }
+
+  res.json({ success: true, message: `Updated ${processName} to ${language}` });
+});
+
+/**
+ * DELETE /api/v1/layout-manager/config/:processName
+ * Remove process from configuration
+ */
+router.delete('/config/:processName', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  const { processName } = req.params;
+  const success = layoutService.removeProcess(processName);
+
+  if (!success) {
+    return res.status(404).json({ error: 'Process not found' });
+  }
+
+  res.json({ success: true, message: `Removed ${processName}` });
+});
+
+/**
+ * POST /api/v1/layout-manager/start
+ * Start layout monitor
+ */
+router.post('/start', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  layoutService.start();
+  res.json({ success: true, message: 'Layout monitor started' });
+});
+
+/**
+ * POST /api/v1/layout-manager/stop
+ * Stop layout monitor
+ */
+router.post('/stop', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  layoutService.stop();
+  res.json({ success: true, message: 'Layout monitor stopped' });
+});
+
+/**
+ * POST /api/v1/layout-manager/force-switch
+ * Force layout switch for a process
+ * 
+ * Body: { processName: string }
+ */
+router.post('/force-switch', (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+
+  const { processName } = req.body;
+
+  if (!processName) {
+    return res.status(400).json({ error: 'processName is required' });
+  }
+
+  const success = layoutService.forceSwitch(processName);
+
+  if (!success) {
+    return res.status(404).json({ error: 'Process not found in config' });
+  }
+
+  res.json({ success: true, message: `Switched to ${processName} layout` });
+});
+
+export { router as layoutManagerRoutes };

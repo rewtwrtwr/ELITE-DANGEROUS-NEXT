@@ -26,6 +26,7 @@ const client = jwksClient.default({
 
 // Extend Express Request type
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: FrontierProfile;
@@ -46,13 +47,13 @@ function getSigningKey(kid: string): Promise<string> {
         reject(err);
         return;
       }
-      
+
       const signingKey = key?.getPublicKey?.();
       if (!signingKey) {
         reject(new Error('Unable to get signing key'));
         return;
       }
-      
+
       resolve(signingKey);
     });
   });
@@ -62,35 +63,25 @@ function getSigningKey(kid: string): Promise<string> {
  * Verify and decode JWT token
  */
 async function verifyToken(token: string): Promise<FrontierProfile> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // First, decode without verification to get kid
-      const decoded = jwt.decode(token, { complete: true }) as
-        (jwt.JwtPayload & { header: { kid: string } }) | null;
+  // First, decode without verification to get kid
+  const decoded = jwt.decode(token, { complete: true }) as
+    (jwt.JwtPayload & { header: { kid: string } }) | null;
 
-      if (!decoded || !decoded.header.kid) {
-        reject(new Error('Invalid token format'));
-        return;
-      }
+  if (!decoded || !decoded.header.kid) {
+    throw new Error('Invalid token format');
+  }
 
-      // Get signing key
-      const signingKey = await getSigningKey(decoded.header.kid);
+  // Get signing key
+  const signingKey = await getSigningKey(decoded.header.kid);
 
-      // Verify token
-      const verified = jwt.verify(token, signingKey, {
-        issuer: process.env.JWT_ISSUER,
-        audience: process.env.JWT_AUDIENCE,
-        complete: false,
-      }) as jwt.JwtPayload & FrontierProfile;
+  // Verify token
+  const verified = jwt.verify(token, signingKey, {
+    issuer: process.env.JWT_ISSUER,
+    audience: process.env.JWT_AUDIENCE,
+    complete: false,
+  }) as jwt.JwtPayload & FrontierProfile;
 
-      resolve(verified);
-    } catch (error) {
-      logger.warn('Auth', 'Token verification failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      reject(error);
-    }
-  });
+  return verified;
 }
 
 /**
