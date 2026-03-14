@@ -6,11 +6,8 @@
 ; General
 Name "Elite Dangerous NEXT - Layout Manager"
 OutFile "EliteDangerous-LayoutManager-Setup.exe"
-DefaultDir "$PROGRAMFILES\ED-LayoutManager"
-DefaultIcon "public\favicon.ico"
 InstallDir "$PROGRAMFILES\ED-LayoutManager"
-ShowInstDetails show
-ShowUnInstDetails show
+InstallDirRegKey HKLM "Software\ED-LayoutManager" "InstallDir"
 RequestExecutionLevel admin
 
 ; Pages
