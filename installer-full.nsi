@@ -45,9 +45,15 @@ Section "Main Application" SecMain
   SetOutPath "$INSTDIR\layout-manager"
   File /r "layout-manager"
   
-  ; Copy public
+  ; Copy public (including index.html)
   SetOutPath "$INSTDIR\public"
-  File /r "public"
+  File "public\index.html"
+  File /r "public\assets"
+  File /r "public\favicon.ico"
+  
+  ; Copy scripts
+  SetOutPath "$INSTDIR\scripts"
+  File /r "scripts"
   
   ; Create shortcuts
   CreateDirectory "$SMPROGRAMS\ED Layout Manager"
