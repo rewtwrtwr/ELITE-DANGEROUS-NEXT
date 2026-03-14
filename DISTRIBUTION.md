@@ -1,24 +1,34 @@
 # Elite Dangerous NEXT - Layout Manager
 ## 📦 Дистрибутив
 
-### 🚀 Запуск Готового Приложения
+### 🚀 Запуск Приложения
 
-**Вариант 1: Через .exe (рекомендуется)**
+**Вариант 1: Через launch.bat (рекомендуется)**
 ```bash
-# Просто запустите
-elite-dangerous-next.exe
+# Дважды кликните на launch.bat
+# Автоматически проверит Python, запустит сервер и откроет браузер
 ```
 
-**Вариант 2: Через launcher.bat**
+**Вариант 2: Ручной запуск**
 ```bash
-# Автоматически откроет браузер
-launcher.bat
-```
-
-**Вариант 3: Через npm (для разработки)**
-```bash
+# Установите зависимости (первый раз)
 npm install
-npm run dev
+
+# Запустите сборку
+npm run build
+
+# Запустите сервер
+node dist/index.js
+
+# Откройте браузер
+http://localhost:3000
+```
+
+**Вариант 3: Установщик Windows**
+```bash
+# Скомпилируйте installer.nsi с помощью NSIS
+# Запустите EliteDangerous-LayoutManager-Setup.exe
+# Следуйте инструкциям установщика
 ```
 
 ---
@@ -26,18 +36,17 @@ npm run dev
 ### 📁 Структура Дистрибутива
 
 ```
-dist/
-├── elite-dangerous-next.exe  # Основное приложение (74MB)
-├── public/                    # Веб-интерфейс
-│   ├── assets/
-│   │   ├── client.css
-│   │   └── client.js
-│   ├── index.html
-│   └── ...
-├── layout-manager/            # Python CLI
+ELITE-DANGEROUS-NEXT/
+├── launch.bat                 ← Лаунчер (рекомендуется)
+├── dist/
+│   ├── index.js               ← Сервер
+│   ├── client/                ← Веб-интерфейс
+│   └── services/              ← Сервисы
+├── public/                    ← Статические файлы
+├── layout-manager/            ← Python CLI
 │   ├── cli.py
 │   └── config.ini
-└── launcher.bat               # Лаунчер
+└── installer.nsi              ← Скрипт установщика
 ```
 
 ---

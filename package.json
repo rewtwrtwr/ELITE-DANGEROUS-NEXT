@@ -38,7 +38,12 @@
     "targets": [
       "node20-win-x64"
     ],
-    "outputPath": "dist"
+    "outputPath": "dist",
+    "patches": {
+      "./dist/index.js": [
+        "process.pkg.allowPaths = ['/snapshot/ELITE-DANGEROUS-NEXT'];"
+      ]
+    }
   },
   "keywords": [
     "elite-dangerous",
