@@ -340,6 +340,8 @@ def process_command(line):
             response = switch_to_language("Russian")
         elif command == "switch_to_english":
             response = switch_to_language("English")
+        elif command == "get_statistics":
+            response = get_statistics()
         else:
             response = {"success": False, "error": f"Unknown command: {command}"}
         
@@ -348,6 +350,52 @@ def process_command(line):
         send_response("unknown", {"success": False, "error": f"Invalid JSON: {e}"})
     except Exception as e:
         send_response(command, {"success": False, "error": str(e)})
+
+def get_statistics():
+    """Get layout switch statistics."""
+    try:
+        history = get_history(1000)  # Get last 1000 entries
+        
+        if not history:
+            return {
+                "success": True,
+                "totalSwitches": 0,
+                "byProcess": {},
+                "byLanguage": {"English": 0, "Russian": 0},
+                "lastSwitch": None,
+                "mostSwitchedProcess": None
+            }
+        
+        # Aggregate data
+        by_process = {}
+        by_language = {"English": 0, "Russian": 0}
+        
+        for entry in history:
+            # Count by process
+            process = entry.get("process", "unknown")
+            by_process[process] = by_process.get(process, 0) + 1
+            
+            # Count by target language
+            to_lang = entry.get("to", "")
+            if to_lang in by_language:
+                by_language[to_lang] += 1
+        
+        # Find most switched process
+        most_switched = max(by_process.items(), key=lambda x: x[1])[0] if by_process else None
+        
+        # Get last switch
+        last_switch = history[-1] if history else None
+        
+        return {
+            "success": True,
+            "totalSwitches": len(history),
+            "byProcess": by_process,
+            "byLanguage": by_language,
+            "lastSwitch": last_switch,
+            "mostSwitchedProcess": most_switched
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 def switch_to_language(language):
     """Switch to specified language immediately."""

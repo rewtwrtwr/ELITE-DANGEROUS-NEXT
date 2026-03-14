@@ -35,6 +35,14 @@ export const LayoutConfigPanel: FC = () => {
   const [history, setHistory] = useState<Array<{ timestamp: string; process: string; from: string; to: string }>>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [lastHotkey, setLastHotkey] = useState<string | null>(null);
+  const [statistics, setStatistics] = useState<{
+    totalSwitches: number;
+    byProcess: Record<string, number>;
+    byLanguage: { English: number; Russian: number };
+    lastSwitch: { timestamp: string; process: string; from: string; to: string } | null;
+    mostSwitchedProcess: string | null;
+  } | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   // Load autoStart setting on mount
   useEffect(() => {
@@ -78,6 +86,21 @@ export const LayoutConfigPanel: FC = () => {
       }
     } catch (err) {
       console.error('Failed to load history:', err);
+    }
+  }, []);
+
+  /**
+   * Load statistics
+   */
+  const loadStatistics = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/layout-manager/statistics');
+      const data = await response.json();
+      if (data.success) {
+        setStatistics(data);
+      }
+    } catch (err) {
+      console.error('Failed to load statistics:', err);
     }
   }, []);
 
@@ -343,16 +366,28 @@ export const LayoutConfigPanel: FC = () => {
       <div className="layout-process-list">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <h3 className="list-title" style={{ margin: 0 }}>Configured Processes</h3>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              loadHistory();
-              setShowHistory(true);
-            }}
-            style={{ padding: '8px 16px', fontSize: '12px' }}
-          >
-            📜 View History
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                loadStatistics();
+                setShowStats(true);
+              }}
+              style={{ padding: '8px 16px', fontSize: '12px' }}
+            >
+              📊 Statistics
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                loadHistory();
+                setShowHistory(true);
+              }}
+              style={{ padding: '8px 16px', fontSize: '12px' }}
+            >
+              📜 View History
+            </button>
+          </div>
         </div>
         {processes.length === 0 ? (
           <div className="empty-state">
@@ -386,6 +421,110 @@ export const LayoutConfigPanel: FC = () => {
           </table>
         )}
       </div>
+
+      {/* Statistics Modal */}
+      {showStats && statistics && (
+        <div className="layout-modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="layout-modal" style={{
+            backgroundColor: '#1a1a2e',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            width: '90%'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, color: '#00a8ff' }}>📊 Layout Statistics</h3>
+              <button
+                className="btn btn-small btn-danger"
+                onClick={() => setShowStats(false)}
+                style={{ padding: '6px 12px' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+            
+            {/* Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ padding: '15px', backgroundColor: 'rgba(0, 168, 255, 0.1)', borderRadius: '6px', border: '1px solid #00a8ff' }}>
+                <div style={{ fontSize: '12px', color: '#8899a6', marginBottom: '5px' }}>Total Switches</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00a8ff' }}>{statistics.totalSwitches}</div>
+              </div>
+              <div style={{ padding: '15px', backgroundColor: 'rgba(0, 255, 136, 0.1)', borderRadius: '6px', border: '1px solid #00ff88' }}>
+                <div style={{ fontSize: '12px', color: '#8899a6', marginBottom: '5px' }}>Most Active</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#00ff88' }}>
+                  {statistics.mostSwitchedProcess || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* Language Distribution */}
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 10px 0', color: '#00a8ff' }}>By Language</h4>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1, padding: '10px', backgroundColor: 'rgba(255, 68, 68, 0.1)', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '12px', color: '#ff4444' }}>🇬🇧 English</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4444' }}>{statistics.byLanguage.English}</div>
+                </div>
+                <div style={{ flex: 1, padding: '10px', backgroundColor: 'rgba(0, 255, 136, 0.1)', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '12px', color: '#00ff88' }}>🇷🇺 Russian</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#00ff88' }}>{statistics.byLanguage.Russian}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* By Process */}
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 10px 0', color: '#00a8ff' }}>By Process</h4>
+              <div style={{ maxHeight: '200px', overflow: 'auto' }}>
+                {Object.entries(statistics.byProcess)
+                  .sort((a, b) => (b[1] as number) - (a[1] as number))
+                  .map(([process, count]) => (
+                    <div key={process} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      padding: '8px', 
+                      borderBottom: '1px solid rgba(0, 168, 255, 0.2)' 
+                    }}>
+                      <span style={{ color: '#e0e0e0' }}>{process}</span>
+                      <span style={{ color: '#00a8ff', fontWeight: 'bold' }}>{String(count)}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Last Switch */}
+            {statistics.lastSwitch && (
+              <div>
+                <h4 style={{ margin: '0 0 10px 0', color: '#00a8ff' }}>Last Switch</h4>
+                <div style={{ padding: '10px', backgroundColor: 'rgba(0, 168, 255, 0.1)', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '12px', color: '#8899a6' }}>
+                    {formatTimestamp(statistics.lastSwitch.timestamp)}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#e0e0e0', marginTop: '5px' }}>
+                    <span style={{ color: '#ff4444' }}>{statistics.lastSwitch.from}</span>
+                    <span style={{ margin: '0 8px' }}>→</span>
+                    <span style={{ color: '#00ff88' }}>{statistics.lastSwitch.to}</span>
+                    <span style={{ marginLeft: '8px', color: '#8899a6' }}>({statistics.lastSwitch.process})</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {showHistory && (

@@ -232,4 +232,21 @@ router.post('/switch/english', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/v1/layout-manager/statistics
+ * Get layout switch statistics
+ */
+router.get('/statistics', async (req: Request, res: Response) => {
+  if (!layoutService) {
+    return res.status(503).json({ error: 'Layout manager not initialized' });
+  }
+  
+  try {
+    const response = await (layoutService as any).pythonBridge.send({ command: 'get_statistics' });
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get statistics', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 export { router as layoutManagerRoutes };
