@@ -795,8 +795,15 @@ async function main(): Promise<void> {
   const layoutManagerService = new LayoutManagerService();
   
   // Initialize Python bridge and load config
-  layoutManagerService.initialize().then(() => {
-    layoutManagerService.loadConfig();
+  layoutManagerService.initialize().then(async () => {
+    await layoutManagerService.loadConfig();
+    
+    // Auto-start if enabled in settings
+    const { getAutoStart } = await import('./services/layout-manager/settings.js');
+    if (getAutoStart()) {
+      await layoutManagerService.start();
+      logger.info('App', 'Layout Manager auto-started');
+    }
   }).catch((err) => {
     logger.error('App', 'Failed to initialize Layout Manager', {
       error: err instanceof Error ? err.message : String(err),
@@ -805,7 +812,7 @@ async function main(): Promise<void> {
   
   app.use("/api/v1/layout-manager", initializeLayoutManagerRoutes(layoutManagerService));
   
-  // Don't auto-start monitor - user controls it via UI
+  // Don't auto-start monitor - user controls it via UI (unless autoStart enabled)
   logger.info("App", "Layout Manager initialized (Python bridge ready)");
 
   // API v1 routes

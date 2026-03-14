@@ -153,4 +153,30 @@ router.post('/force-switch', (req: Request, res: Response) => {
   res.status(501).json({ error: 'Not implemented - layout switching is automatic' });
 });
 
+/**
+ * GET /api/v1/layout-manager/settings/auto-start
+ * Get auto-start setting
+ */
+router.get('/settings/auto-start', async (_req: Request, res: Response) => {
+  const { getAutoStart } = await import('../settings.js');
+  const enabled = getAutoStart();
+  res.json({ enabled });
+});
+
+/**
+ * POST /api/v1/layout-manager/settings/auto-start
+ * Set auto-start setting
+ */
+router.post('/settings/auto-start', async (req: Request, res: Response) => {
+  const { setAutoStart } = await import('../settings.js');
+  const { enabled } = req.body;
+  
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: 'enabled must be a boolean' });
+  }
+  
+  setAutoStart(enabled);
+  res.json({ success: true, enabled });
+});
+
 export { router as layoutManagerRoutes };

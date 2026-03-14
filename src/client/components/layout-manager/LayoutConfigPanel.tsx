@@ -5,7 +5,7 @@
  */
 
 import type { FC, KeyboardEvent, ChangeEvent } from 'react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLayoutManager } from '../../hooks/useLayoutManager.js';
 import type { LayoutProcess } from '../../api/layout-manager.js';
 import './LayoutConfigPanel.css';
@@ -31,6 +31,37 @@ export const LayoutConfigPanel: FC = () => {
   const [language, setLanguage] = useState<'English' | 'Russian'>('English');
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [autoStart, setAutoStart] = useState(false);
+
+  // Load autoStart setting on mount
+  useEffect(() => {
+    fetch('/api/v1/layout-manager/settings/auto-start')
+      .then(res => res.json())
+      .then(data => setAutoStart(data.enabled))
+      .catch(err => console.error('Failed to load autoStart setting:', err));
+  }, []);
+
+  /**
+   * Handle toggle autoStart
+   */
+  const handleToggleAutoStart = useCallback(async () => {
+    const newValue = !autoStart;
+    try {
+      const response = await fetch('/api/v1/layout-manager/settings/auto-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: newValue }),
+      });
+      
+      if (response.ok) {
+        setAutoStart(newValue);
+        setSuccessMessage(newValue ? 'Auto-start enabled' : 'Auto-start disabled');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to toggle autoStart:', err);
+    }
+  }, [autoStart]);
 
   /**
    * Validate process name
@@ -209,6 +240,21 @@ export const LayoutConfigPanel: FC = () => {
           >
             {isRunning ? 'Stop Monitor' : 'Start Monitor'}
           </button>
+        </div>
+        
+        <div className="form-row" style={{ marginTop: '15px' }}>
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              id="autoStart"
+              type="checkbox"
+              checked={autoStart}
+              onChange={handleToggleAutoStart}
+              style={{ width: 'auto', margin: 0 }}
+            />
+            <label htmlFor="autoStart" className="form-label" style={{ margin: 0, cursor: 'pointer' }}>
+              Auto-start monitoring on app launch
+            </label>
+          </div>
         </div>
       </div>
 
