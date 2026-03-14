@@ -77,10 +77,13 @@ def get_config():
     config = load_config()
     processes = []
     for section in config.sections():
+        layout_id_str = config.get(section, 'LayoutID', fallback='0x4090409')
+        # Parse hex string (0x4190419) or decimal
+        layout_id = int(layout_id_str, 16) if layout_id_str.startswith('0x') else int(layout_id_str)
         processes.append({
             "name": section,
             "language": config.get(section, 'Language', fallback='English'),
-            "layoutId": config.getint(section, 'LayoutID', fallback=0x4090409)
+            "layoutId": layout_id
         })
     return {"success": True, "processes": processes}
 
@@ -141,6 +144,7 @@ def monitor_loop():
                 config = load_config()
                 if process_name in config:
                     layout_id_str = config.get(process_name, 'LayoutID', fallback='0x4090409')
+                    # Parse hex string (0x4190419) or decimal
                     target_layout = int(layout_id_str, 16) if layout_id_str.startswith('0x') else int(layout_id_str)
                     
                     current_layout = get_current_layout()
